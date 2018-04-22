@@ -126,6 +126,11 @@
       <artifactId>bio-formats_plugins</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>de.biomedical-imaging.ij</groupId>
+      <artifactId>ij_blob</artifactId>
+      <version>1.4.0</version>
+    </dependency>
   </dependencies>
 
 </project>
