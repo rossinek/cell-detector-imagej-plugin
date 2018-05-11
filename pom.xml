@@ -92,8 +92,8 @@
   </repositories>
 
   <properties>
-    <package-name>pl.arturrosa.mtbt</package-name>
-    <main-class>pl.arturrosa.mtbt.MtbtPlugin</main-class>
+    <package-name>sc.fiji</package-name>
+    <main-class>sc.fiji.Main</main-class>
     <license.licenseName>bsd_2</license.licenseName>
     <license.copyrightOwners>Artur Rosa</license.copyrightOwners>
   </properties>
