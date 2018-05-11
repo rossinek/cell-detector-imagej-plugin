@@ -16,9 +16,7 @@ import ij.ImagePlus;
 import ij.blob.ManyBlobs;
 import ij.gui.PolygonRoi;
 import ij.gui.Roi;
-import ij.plugin.SubHyperstackMaker;
 import ij.plugin.frame.RoiManager;
-import ij.process.ImageConverter;
 
 @Plugin(type = Command.class, menuPath = "Developement>Select blobs")
 public class SelectBlobsPlugin implements Command, Previewable {
@@ -119,10 +117,7 @@ public class SelectBlobsPlugin implements Command, Previewable {
 	}
 
 	private ImagePlus blurAndThreshold (ImagePlus input, int channel, int frame, double sigma, int threshold) {
-		ImagePlus output = SubHyperstackMaker.makeSubhyperstack(input, Integer.toString(channel),
-		    Integer.toString(input.getSlice()), Integer.toString(frame));
-		ImageConverter converter = new ImageConverter(output);
-		converter.convertToGray8();
+		ImagePlus output = HyperstackHelper.extractGray8Frame(input, channel, input.getSlice(), frame);
 		output.getProcessor().blurGaussian(sigma);
 		output.getProcessor().threshold(threshold);
 		output.getProcessor().invert();

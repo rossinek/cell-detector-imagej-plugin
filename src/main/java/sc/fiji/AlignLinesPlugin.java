@@ -56,10 +56,17 @@ public class AlignLinesPlugin implements Command {
 			return;
 		}
 
-		System.out.println("roiManager count: " + roiManager.getCount());
+		ImagePlus frame = HyperstackHelper.extractGray8Frame(imp, imp.getC(), imp.getSlice(), imp.getT());
+
 		for (Roi _roi : roiManager.getRoisAsArray()) {
 			PolygonRoi roi = (PolygonRoi) _roi;
-			System.out.println(roi.getStrokeWidth());
+			// System.out.println(roi.getStrokeWidth());
+			System.out.println("Score: " + computeLineScore(frame, roi));
 		}
+	}
+
+	private int computeLineScore (ImagePlus input, PolygonRoi roi) {
+		input.show();
+		return 0;
 	}
 }
