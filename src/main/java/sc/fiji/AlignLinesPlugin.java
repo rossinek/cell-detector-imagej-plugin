@@ -7,6 +7,7 @@ import org.scijava.plugin.Plugin;
 import org.scijava.ui.DialogPrompt;
 import org.scijava.ui.UIService;
 
+import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.PolygonRoi;
 import ij.gui.Roi;
@@ -50,19 +51,32 @@ public class AlignLinesPlugin implements Command {
 	private void alignLines () {
 		RoiManager roiManager = RoiManager.getInstance();
 		try {
-			validateRois(roiManager);
+			//			validateRois(roiManager);
 		} catch (IllegalArgumentException e) {
 			uiService.showDialog(e.getMessage(), DialogPrompt.MessageType.ERROR_MESSAGE);
 			return;
 		}
 
-		ImagePlus frame = HyperstackHelper.extractGray8Frame(imp, imp.getC(), imp.getSlice(), imp.getT());
+		//		ImagePlus frame = HyperstackHelper.extractGray8Frame(imp, imp.getC(), imp.getSlice(), imp.getT());
+		getBinaryPattern();
+		//		for (Roi _roi : roiManager.getRoisAsArray()) {
+		//			PolygonRoi roi = (PolygonRoi) _roi;
+		//			// System.out.println(roi.getStrokeWidth());
+		//			//			System.out.println("Score: " + computeLineScore(frame, roi));
+		//		}
+	}
 
-		for (Roi _roi : roiManager.getRoisAsArray()) {
-			PolygonRoi roi = (PolygonRoi) _roi;
-			// System.out.println(roi.getStrokeWidth());
-			System.out.println("Score: " + computeLineScore(frame, roi));
-		}
+	private ImagePlus getBinaryPattern () {
+		ImagePlus frame = imp.duplicate();
+		IJ.run(frame, "Gaussian Blur...", "sigma=2 stack");
+		IJ.run(frame, "Variance...", "radius=2 stack");
+		IJ.run(frame, "Convert to Mask", "method=Triangle background=Dark calculate black");
+
+		System.out.println("Is binary: " + frame.getProcessor().isBinary());
+		System.out.println("Is threshold: " + frame.isThreshold());
+
+		frame.show();
+		return frame;
 	}
 
 	private int computeLineScore (ImagePlus input, PolygonRoi roi) {
