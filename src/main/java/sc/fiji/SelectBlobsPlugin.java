@@ -117,7 +117,7 @@ public class SelectBlobsPlugin implements Command, Previewable {
 	}
 
 	private ImagePlus blurAndThreshold (ImagePlus input, int channel, int frame, double sigma, int threshold) {
-		ImagePlus output = HyperstackHelper.extractGray8Frame(input, channel, input.getSlice(), frame);
+		ImagePlus output = HyperstackHelper.extractGrayFrame(input, channel, input.getSlice(), frame, 8);
 		output.getProcessor().blurGaussian(sigma);
 		output.getProcessor().threshold(threshold);
 		output.getProcessor().invert();

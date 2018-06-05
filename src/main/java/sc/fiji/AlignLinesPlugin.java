@@ -67,11 +67,11 @@ public class AlignLinesPlugin implements Command {
 	}
 
 	private ImagePlus getBinaryPattern () {
-		ImagePlus frame = imp.duplicate();
+		ImagePlus frame = HyperstackHelper.extractChannel(imp, imp.getChannel());
 		IJ.run(frame, "Gaussian Blur...", "sigma=2 stack");
 		IJ.run(frame, "Variance...", "radius=2 stack");
-		IJ.run(frame, "Convert to Mask", "method=Triangle background=Dark calculate black");
-
+		IJ.run(frame, "Enhance Contrast...", "saturated=0.3 equalize process_all use");
+		IJ.run(frame, "Convert to Mask", "method=Otsu background=Dark calculate black");
 		System.out.println("Is binary: " + frame.getProcessor().isBinary());
 		System.out.println("Is threshold: " + frame.isThreshold());
 
