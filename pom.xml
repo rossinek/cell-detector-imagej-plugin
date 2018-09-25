@@ -124,7 +124,17 @@
     <dependency>
       <groupId>ome</groupId>
       <artifactId>bio-formats_plugins</artifactId>
-      <scope>runtime</scope>
+      <exclusions>
+        <!-- NB: Guava requires Java 7+, so we exclude it here. -->
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>ome</groupId>
+      <artifactId>formats-api</artifactId>
     </dependency>
     <dependency>
       <groupId>de.biomedical-imaging.ij</groupId>
