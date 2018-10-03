@@ -3,6 +3,9 @@ package sc.fiji;
 import ij.*;
 import ij.process.*;
 import ij.gui.GenericDialog;
+import org.scijava.command.Command;
+import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
 
 import java.util.Arrays;
 
@@ -25,7 +28,9 @@ import java.util.Arrays;
  * @author Tom Gibara
  */
 
-public class CannyEdgeDetector {
+
+@Plugin(type = Command.class, menuPath = "Developement>Canny Edge Detector")
+public class CannyEdgeDetector implements Command  {
   private final static float GAUSSIAN_CUT_OFF = 0.005f;
   private final static float MAGNITUDE_SCALE = 100F;
   private final static float MAGNITUDE_LIMIT = 1000F;
@@ -38,6 +43,7 @@ public class CannyEdgeDetector {
   private int picsize;
   private int[] data;
   private int[] magnitude;
+  @Parameter
   private ImagePlus sourceImage;
 
   private static float sGaussianKernelRadius = 2f;
@@ -65,6 +71,11 @@ public class CannyEdgeDetector {
     highThreshold = highT;
     contrastNormalized = normContrast;
     run(false);
+  }
+
+  @Override
+  public void run () {
+    run(true);
   }
 
   public void run (ImagePlus imp) {
