@@ -1,4 +1,4 @@
-package sc.fiji;
+package dev.mtbt;
 
 import java.io.File;
 

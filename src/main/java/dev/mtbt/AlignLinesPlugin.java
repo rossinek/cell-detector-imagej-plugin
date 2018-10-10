@@ -1,4 +1,4 @@
-package sc.fiji;
+package dev.mtbt;
 
 import org.scijava.command.Command;
 import org.scijava.log.LogService;

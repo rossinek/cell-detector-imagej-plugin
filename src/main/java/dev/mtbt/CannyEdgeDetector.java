@@ -1,4 +1,4 @@
-package sc.fiji;
+package dev.mtbt;
 
 import ij.*;
 import ij.process.*;
