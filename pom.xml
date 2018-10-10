@@ -1,146 +1,151 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    
-  <modelVersion>4.0.0</modelVersion>
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-  <groupId>sc.fiji</groupId>
-  <artifactId>Mtbt_Plugin</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
-  
-  <name>Mtbt Plugin</name>
-  <description>Base for ii MT plugin.</description>
-  <url>arturrosa.pl</url>
-  <inceptionYear>2018</inceptionYear>
-  <organization>
-    <name>ii</name>
-    <url>http://ii.uni.wroc.pl/</url>
-  </organization>
-  <licenses>
-    <license>
-      <name>Simplified BSD License</name>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
-  
-  <parent>
-    <groupId>org.scijava</groupId>
-    <artifactId>pom-scijava</artifactId>
-    <version>19.2.0</version>
-    <relativePath />
-  </parent>
-  
-  <contributors>
-    <contributor>
-      <name>Artur Rosa</name>
-      <url>arturrosa.pl</url>
-      <roles>
-        <role>founder</role>
-        <role>lead</role>
-        <role>developer</role>
-        <role>debugger</role>
-        <role>reviewer</role>
-        <role>support</role>
-        <role>maintainer</role>
-      </roles>
-      <properties><id>dscho</id></properties>
-    </contributor>
-  </contributors>
-  
-  <mailingLists>
-    <mailingList>
-      <name>ImageJ Forum</name>
-      <archive>http://forum.imagej.net/</archive>
-    </mailingList>
-  </mailingLists>
-  <scm>
-    <connection>scm:git:git://github.com/rossinek/repo</connection>
-    <developerConnection>scm:git:git@rossinek/repo</developerConnection>
-    <tag>HEAD</tag>
-    <url>https://github.com/rossinek/repo</url>
-  </scm>
-  <issueManagement>
-    <system>GitHub Issues</system>
-    <url>https://github.com/rossinek</url>
-  </issueManagement>
-  <ciManagement>
-    <system>None</system>
-  </ciManagement>
+    <modelVersion>4.0.0</modelVersion>
 
-  <developers>
-    <developer>
-      <id>rossinek</id>
-      <name>Artur Rosa</name>
-      <url>http://github.com/rossinek</url>
-      <roles>
-        <role>founder</role>
-        <role>lead</role>
-        <role>developer</role>
-        <role>debugger</role>
-        <role>reviewer</role>
-        <role>support</role>
-        <role>maintainer</role>
-      </roles>
-    </developer>
-  </developers>
-  <repositories>
-    <repository>
-      <id>imagej.public</id>
-      <url>http://maven.imagej.net/content/groups/public</url>
-    </repository>
-  </repositories>
+    <groupId>dev.mtbt</groupId>
+    <artifactId>Mtbt_Plugin</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
 
-  <properties>
-    <package-name>sc.fiji</package-name>
-    <main-class>sc.fiji.Main</main-class>
-    <license.licenseName>bsd_2</license.licenseName>
-    <license.copyrightOwners>Artur Rosa</license.copyrightOwners>
-  </properties>
+    <name>Mtbt Plugin</name>
+    <description>Base for ii MT plugin.</description>
+    <url>arturrosa.pl</url>
+    <inceptionYear>2018</inceptionYear>
+    <organization>
+        <name>ii</name>
+        <url>http://ii.uni.wroc.pl/</url>
+    </organization>
+    <licenses>
+        <license>
+            <name>Simplified BSD License</name>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
-  <dependencies>
-    <!-- ImageJ dependencies -->
-    <dependency>
-      <groupId>net.imagej</groupId>
-      <artifactId>imagej</artifactId>
-    </dependency>
-    <!-- SciJava dependencies -->
-    <dependency>
-      <groupId>org.scijava</groupId>
-      <artifactId>scijava-common</artifactId>
-    </dependency>
-    <!-- Fiji dependencies -->
-    <dependency>
-      <groupId>sc.fiji</groupId>
-      <artifactId>fiji-lib</artifactId>
-    </dependency>
-    <!-- Fiji Incorporates Jointly ImageJ1 ;-) -->
-    <dependency>
-      <groupId>net.imagej</groupId>
-      <artifactId>imagej-legacy</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <!-- https://github.com/openmicroscopy/bioformats -->
-    <dependency>
-      <groupId>ome</groupId>
-      <artifactId>bio-formats_plugins</artifactId>
-      <exclusions>
-        <!-- NB: Guava requires Java 7+, so we exclude it here. -->
-        <exclusion>
-          <groupId>com.google.guava</groupId>
-          <artifactId>guava</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>ome</groupId>
-      <artifactId>formats-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>de.biomedical-imaging.ij</groupId>
-      <artifactId>ij_blob</artifactId>
-      <version>1.4.0</version>
-    </dependency>
-  </dependencies>
+    <parent>
+        <groupId>org.scijava</groupId>
+        <artifactId>pom-scijava</artifactId>
+        <version>19.2.0</version>
+        <relativePath/>
+    </parent>
+
+    <contributors>
+        <contributor>
+            <name>Artur Rosa</name>
+            <url>arturrosa.pl</url>
+            <roles>
+                <role>founder</role>
+                <role>lead</role>
+                <role>developer</role>
+                <role>debugger</role>
+                <role>reviewer</role>
+                <role>support</role>
+                <role>maintainer</role>
+            </roles>
+            <properties>
+                <id>dscho</id>
+            </properties>
+        </contributor>
+    </contributors>
+
+    <mailingLists>
+        <mailingList>
+            <name>ImageJ Forum</name>
+            <archive>http://forum.imagej.net/</archive>
+        </mailingList>
+    </mailingLists>
+    <scm>
+        <connection>scm:git:git://github.com/rossinek/repo</connection>
+        <developerConnection>scm:git:git@rossinek/repo</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://github.com/rossinek/repo</url>
+    </scm>
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/rossinek</url>
+    </issueManagement>
+    <ciManagement>
+        <system>None</system>
+    </ciManagement>
+
+    <developers>
+        <developer>
+            <id>rossinek</id>
+            <name>Artur Rosa</name>
+            <url>http://github.com/rossinek</url>
+            <roles>
+                <role>founder</role>
+                <role>lead</role>
+                <role>developer</role>
+                <role>debugger</role>
+                <role>reviewer</role>
+                <role>support</role>
+                <role>maintainer</role>
+            </roles>
+        </developer>
+    </developers>
+    <repositories>
+        <repository>
+            <id>imagej.public</id>
+            <url>http://maven.imagej.net/content/groups/public</url>
+        </repository>
+    </repositories>
+
+    <properties>
+        <package-name>dev.mtbt</package-name>
+        <main-class>dev.mtbt.Main</main-class>
+        <license.licenseName>bsd_2</license.licenseName>
+        <license.copyrightOwners>Artur Rosa</license.copyrightOwners>
+    </properties>
+
+    <dependencies>
+        <!-- ImageJ dependencies -->
+        <dependency>
+            <groupId>net.imagej</groupId>
+            <artifactId>imagej</artifactId>
+        </dependency>
+        <!-- SciJava dependencies -->
+        <dependency>
+            <groupId>org.scijava</groupId>
+            <artifactId>scijava-common</artifactId>
+        </dependency>
+        <!-- Fiji dependencies -->
+        <dependency>
+            <groupId>sc.fiji</groupId>
+            <artifactId>fiji-lib</artifactId>
+        </dependency>
+        <!-- Fiji Incorporates Jointly ImageJ1 ;-) -->
+        <dependency>
+            <groupId>net.imagej</groupId>
+            <artifactId>imagej-legacy</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- https://github.com/openmicroscopy/bioformats -->
+        <dependency>
+            <groupId>ome</groupId>
+            <artifactId>bio-formats_plugins</artifactId>
+            <exclusions>
+                <!-- NB: Guava requires Java 7+, so we exclude it here. -->
+                <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>ome</groupId>
+            <artifactId>formats-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>sc.fiji</groupId>
+            <artifactId>AnalyzeSkeleton_</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>sc.fiji</groupId>
+            <artifactId>Skeletonize3D_</artifactId>
+        </dependency>
+    </dependencies>
 
 </project>

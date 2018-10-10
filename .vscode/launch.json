@@ -1,0 +1,11 @@
+{
+  "configurations": [
+    {
+      "type": "java",
+      "name": "CodeLens (Launch) - Main",
+      "request": "launch",
+      "mainClass": "dev.mtbt.Main",
+      "projectName": "Mtbt_Plugin"
+    }
+  ]
+}
