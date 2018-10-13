@@ -1,16 +1,14 @@
 package dev.mtbt.cells;
 
 import dev.mtbt.Utils;
+import dev.mtbt.cells.skeleton.Skeleton;
+import dev.mtbt.cells.skeleton.Spine;
 import ij.ImagePlus;
 import ij.gui.PolygonRoi;
-import ij.gui.Roi;
 import ij.gui.Toolbar;
-import ij.plugin.filter.EDM;
 import ij.plugin.frame.RoiManager;
-import ij.process.ByteProcessor;
 import ij.process.FloatProcessor;
-import ij.process.ImageProcessor;
-import ij.process.ShortProcessor;
+import javafx.util.Pair;
 import net.imagej.ops.OpService;
 import org.scijava.Initializable;
 import org.scijava.command.Command;
@@ -26,6 +24,7 @@ import dev.mtbt.ShapeIndexMap;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.ListIterator;
 
 @Plugin(type = Command.class, menuPath = "Developement>Cell detector")
 public class CellDetector extends InteractiveCommand implements Initializable {
@@ -40,11 +39,11 @@ public class CellDetector extends InteractiveCommand implements Initializable {
 
   // Dialog inputs
   @Parameter(persist = false, label = "Channel", callback = "channelInputChange")
-  private int channelInput = 1;
+  private int channelInput;
   @Parameter(persist = false, label = "Shape index map gaussian blur radius", style = NumberWidget.SCROLL_BAR_STYLE, min = "0", max = "10", stepSize = "0.1")
-  private double blurRadiusInput = 4.0;
+  private double blurRadiusInput;
   @Parameter(persist = false, label = "Shape index map threshold", style = NumberWidget.SCROLL_BAR_STYLE, min = "-1", max = "1", stepSize = "0.1")
-  private double thresholdInput = 0.0;
+  private double thresholdInput;
 
   @Parameter(label = "Select cells", callback = "selectCellsButtonClick")
   private Button selectCellsButton;
@@ -57,11 +56,13 @@ public class CellDetector extends InteractiveCommand implements Initializable {
   private ArrayList<Cell> cells = new ArrayList<>();
 
   @Override
-  public void initialize() {
+  public void initialize () {
     System.out.println("> initialize");
-    if (imp != null) {
-      channelInput = imp.getChannel();
-    }
+    if (imp == null)
+      return;
+    channelInput = imp.getChannel();
+    blurRadiusInput = 4.0;
+    thresholdInput = 0.0;
   }
 
   @Override
@@ -87,10 +88,8 @@ public class CellDetector extends InteractiveCommand implements Initializable {
     System.out.println("> selectCellsButtonClick");
     if (impIndexMap != null) {
       impIndexMap.deleteRoi();
-      impIndexMap.show();
     }
     Toolbar.getInstance().setTool(Toolbar.POINT);
-
   }
 
   protected void runButtonClick () {
@@ -142,9 +141,30 @@ public class CellDetector extends InteractiveCommand implements Initializable {
       return;
     }
     Skeleton skeleton = new Skeleton(impIndexMap);
-    skeleton.toImagePlus().show();
-    //    skeleton.segmentation();
-    //    segmentSkeleton(skeleton).forEach(polyLine -> cells.add(new Cell(polyLine)));
+
+    ArrayList<Pair<Point, Spine>> spines = new ArrayList<>();
+    initialPoints.forEach((point) -> spines.add(new Pair(point, skeleton.findSpine(point))));
+    spines.forEach((spine) -> cells.add(new Cell(spine.getValue())));
+    boolean change = false;
+    do {
+      ListIterator<Pair<Point, Spine>> iterator = spines.listIterator();
+      while (iterator.hasNext()) {
+        Pair<Point, Spine> spine = iterator.next();
+        for (Pair<Point, Spine> s : spines) {
+          if (spine.getValue().overlaps(s.getValue())) {
+            // TODO: resolve conflict
+            throw new Error("Not implemented yet");
+            // change = true;
+            // break;
+          }
+        }
+      }
+    } while (change);
+
+    RoiManager roiManager = Utils.getRoiManager();
+    roiManager.reset();
+    cells.forEach(cell -> roiManager.addRoi(cell.toRoi()));
+    roiManager.runCommand("show all");
   }
 
 
