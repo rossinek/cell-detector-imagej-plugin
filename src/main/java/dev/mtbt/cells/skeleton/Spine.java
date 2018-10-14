@@ -133,7 +133,6 @@ public class Spine {
         weakestPoint = points.get(i);
       }
     }
-    System.out.println("Weakest point: " + weakestPoint.toString());
     Spine[] spines = split(weakestPoint);
     if (index1 > index2) Collections.reverse(Arrays.asList(spines));
     return spines;
@@ -147,7 +146,14 @@ public class Spine {
       Edge branch = newEdges[i];
       Spine spine = new Spine();
       spines[i] = spine;
-      traverse(branch.getV1(), branch, (v1, v2, e) -> spine.addEdge(e));
+      spine.addEdge(branch);
+      Vertex start = equalVertices(branch.getV2(), edge.getV1()) ? edge.getV1() : edge.getV2();
+      if (!isLeaf(start)) {
+        Edge firstEdge = start.getBranches().get(start.getBranches().get(0) != edge ? 0 : 1);
+        traverse(start, firstEdge, (v1, v2, e) -> {
+          spine.addEdge(e);
+        });
+      }
     }
     return spines;
   }
@@ -248,7 +254,7 @@ public class Spine {
   }
 
   private boolean isLeaf (Vertex v) {
-    return v.getBranches().size() == 1;
+    return v.getBranches().size() < 2;
   }
 
   private Edge findEdge (Point slab) {

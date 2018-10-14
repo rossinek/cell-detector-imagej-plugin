@@ -91,10 +91,6 @@
             <id>imagej.public</id>
             <url>http://maven.imagej.net/content/groups/public</url>
         </repository>
-        <repository>
-            <id>my-local-repo</id>
-            <url>file://${basedir}/lib</url>
-        </repository>
     </repositories>
 
     <properties>

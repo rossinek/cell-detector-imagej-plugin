@@ -171,6 +171,7 @@ public class CellDetector extends InteractiveCommand implements Initializable {
       }
     } while (change);
 
+    cells.clear();
     spines.forEach((spine) -> cells.add(new Cell(spine.getValue())));
     RoiManager roiManager = Utils.getRoiManager();
     roiManager.reset();

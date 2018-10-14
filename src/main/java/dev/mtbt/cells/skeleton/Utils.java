@@ -164,17 +164,17 @@ public class Utils {
 
   static Edge[] split (Edge edge, Point slab) {
     ArrayList<Point> slabs = directedSlabs(edge, edge.getV1());
-    // TODO: check if indexOf it works as expected
     int index = slabs.indexOf(slab);
     ArrayList<Point> slabs1 = new ArrayList<>(slabs.subList(0, index));
     ArrayList<Point> slabs2 = new ArrayList<>(slabs.subList(index+1, slabs.size()));
+
     Vertex vSlab1 = new Vertex();
     vSlab1.addPoint(slab);
+    Vertex v1 = edge.getV1().cloneUnconnected();
     Vertex vSlab2 = vSlab1.cloneUnconnected();
-    Edge edge1 = new Edge(vSlab1, edge.getV1(), slabs1, Double.NaN);
-    Edge edge2 = new Edge(vSlab2, edge.getV2(), slabs2, Double.NaN);
-    vSlab1.setBranch(edge1);
-    vSlab2.setBranch(edge2);
+    Vertex v2 = edge.getV2().cloneUnconnected();
+    Edge edge1 = new Edge(vSlab1, v1, slabs1, Double.NaN);
+    Edge edge2 = new Edge(vSlab2, v2, slabs2, Double.NaN);
     return new Edge[] { edge1, edge2 };
   }
 
@@ -183,5 +183,9 @@ public class Utils {
   }
   public static java.awt.Point convertPoint (Point p) {
     return new java.awt.Point(p.x, p.y);
+  }
+
+  public static String edgeToString (Edge e) {
+    return e.getV1().pointsToString() + " <---> " + e.getV2().pointsToString();
   }
 }
