@@ -1,15 +1,15 @@
 package dev.mtbt.cells.skeleton;
 
 import sc.fiji.analyzeSkeleton.Edge;
+import sc.fiji.analyzeSkeleton.Graph;
 import sc.fiji.analyzeSkeleton.Point;
 import sc.fiji.analyzeSkeleton.Vertex;
 
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-class Utils {
+public class Utils {
   static boolean equalVertices (Vertex v1, Vertex v2) {
     List<Point> s1 = v1.getPoints();
     List<Point> s2 = v2.getPoints();
@@ -137,5 +137,51 @@ class Utils {
       Collections.reverse(slabs);
     }
     return slabs;
+  }
+
+  static Edge closestEdge (Graph[] graphs, Point point) {
+    ArrayList<Edge> edges = new ArrayList<>();
+    for (Graph graph : graphs) {
+      edges.addAll(graph.getEdges());
+    }
+    return closestEdge(edges, point);
+  }
+
+  static Edge closestEdge (ArrayList<Edge> edges, Point point) {
+    double bestDistance = Double.POSITIVE_INFINITY;
+    Edge bestEdge = null;
+    for (Edge edge : edges) {
+      for (Point slab : edge.getSlabs()) {
+        double dist = distance(point, slab);
+        if (dist < bestDistance) {
+          bestDistance = dist;
+          bestEdge = edge;
+        }
+      }
+    }
+    return bestEdge;
+  }
+
+  static Edge[] split (Edge edge, Point slab) {
+    ArrayList<Point> slabs = directedSlabs(edge, edge.getV1());
+    // TODO: check if indexOf it works as expected
+    int index = slabs.indexOf(slab);
+    ArrayList<Point> slabs1 = new ArrayList<>(slabs.subList(0, index));
+    ArrayList<Point> slabs2 = new ArrayList<>(slabs.subList(index+1, slabs.size()));
+    Vertex vSlab1 = new Vertex();
+    vSlab1.addPoint(slab);
+    Vertex vSlab2 = vSlab1.cloneUnconnected();
+    Edge edge1 = new Edge(vSlab1, edge.getV1(), slabs1, Double.NaN);
+    Edge edge2 = new Edge(vSlab2, edge.getV2(), slabs2, Double.NaN);
+    vSlab1.setBranch(edge1);
+    vSlab2.setBranch(edge2);
+    return new Edge[] { edge1, edge2 };
+  }
+
+  public static Point convertPoint (java.awt.Point p) {
+    return new Point(p.x, p.y, 0);
+  }
+  public static java.awt.Point convertPoint (Point p) {
+    return new java.awt.Point(p.x, p.y);
   }
 }

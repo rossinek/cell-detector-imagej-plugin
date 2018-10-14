@@ -13,6 +13,7 @@ import net.imagej.ops.OpService;
 import org.scijava.Initializable;
 import org.scijava.command.Command;
 import org.scijava.command.InteractiveCommand;
+import org.scijava.module.MutableModuleItem;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.tool.ToolService;
@@ -26,6 +27,8 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.ListIterator;
 
+import static dev.mtbt.cells.skeleton.Utils.convertPoint;
+
 @Plugin(type = Command.class, menuPath = "Developement>Cell detector")
 public class CellDetector extends InteractiveCommand implements Initializable {
   @Parameter
@@ -38,8 +41,10 @@ public class CellDetector extends InteractiveCommand implements Initializable {
   OpService ops;
 
   // Dialog inputs
-  @Parameter(persist = false, label = "Channel", callback = "channelInputChange")
+  @Parameter(persist = false, label = "Channel", style = NumberWidget.SCROLL_BAR_STYLE, min = "1")
   private int channelInput;
+  @Parameter(persist = false, label = "Frame", style = NumberWidget.SCROLL_BAR_STYLE, min = "1")
+  private int frameInput;
   @Parameter(persist = false, label = "Shape index map gaussian blur radius", style = NumberWidget.SCROLL_BAR_STYLE, min = "0", max = "10", stepSize = "0.1")
   private double blurRadiusInput;
   @Parameter(persist = false, label = "Shape index map threshold", style = NumberWidget.SCROLL_BAR_STYLE, min = "-1", max = "1", stepSize = "0.1")
@@ -58,9 +63,13 @@ public class CellDetector extends InteractiveCommand implements Initializable {
   @Override
   public void initialize () {
     System.out.println("> initialize");
-    if (imp == null)
-      return;
+    if (imp == null) return;
+    final MutableModuleItem<Integer> frameInputItem = getInfo().getMutableInput("frameInput", int.class);
+    frameInputItem.setMaximumValue(imp.getNFrames());
+    final MutableModuleItem<Integer> channelInputItem = getInfo().getMutableInput("channelInput", int.class);
+    channelInputItem.setMaximumValue(imp.getNChannels());
     channelInput = imp.getChannel();
+    frameInput = imp.getFrame();
     blurRadiusInput = 4.0;
     thresholdInput = 0.0;
   }
@@ -77,11 +86,6 @@ public class CellDetector extends InteractiveCommand implements Initializable {
   public void preview () {
     System.out.println("> preview");
     run();
-  }
-
-  protected void channelInputChange () {
-    System.out.println("> channelInputChange");
-    channelInput = Math.max(1, Math.min(channelInput, imp.getNChannels()));
   }
 
   protected void selectCellsButtonClick () {
@@ -108,7 +112,7 @@ public class CellDetector extends InteractiveCommand implements Initializable {
     if (roi == null) {
       return;
     }
-    System.out.println("Collect selected points (" + roi.getFloatPolygon().npoints + ")");
+    System.out.println("> collect selected points (" + roi.getFloatPolygon().npoints + ")");
     int[] xPoints = roi.getPolygon().xpoints;
     int[] yPoints = roi.getPolygon().ypoints;
     for (int i = 0; i < xPoints.length; i++) {
@@ -117,7 +121,7 @@ public class CellDetector extends InteractiveCommand implements Initializable {
   }
 
   private void computeShapeIndexMap () {
-    ImagePlus frame = HyperstackHelper.extractFrame(imp, channelInput, imp.getSlice(), imp.getFrame());
+    ImagePlus frame = HyperstackHelper.extractFrame(imp, channelInput, imp.getSlice(), frameInput);
     ImagePlus indexMap = ShapeIndexMap.getShapeIndexMap(frame, blurRadiusInput);
     if (impIndexMap == null) {
       impIndexMap = indexMap;
@@ -144,23 +148,30 @@ public class CellDetector extends InteractiveCommand implements Initializable {
 
     ArrayList<Pair<Point, Spine>> spines = new ArrayList<>();
     initialPoints.forEach((point) -> spines.add(new Pair(point, skeleton.findSpine(point))));
-    spines.forEach((spine) -> cells.add(new Cell(spine.getValue())));
-    boolean change = false;
+    boolean change;
     do {
+      change = false;
       ListIterator<Pair<Point, Spine>> iterator = spines.listIterator();
       while (iterator.hasNext()) {
         Pair<Point, Spine> spine = iterator.next();
-        for (Pair<Point, Spine> s : spines) {
-          if (spine.getValue().overlaps(s.getValue())) {
-            // TODO: resolve conflict
-            throw new Error("Not implemented yet");
-            // change = true;
-            // break;
+        for (int i = iterator.nextIndex(); i < spines.size(); i++) {
+          if (spine.getValue().overlaps(spines.get(i).getValue())) {
+            Point p1 = spine.getKey();
+            Point p2 = spines.get(i).getKey();
+            Spine[] newSpines = spine.getValue()
+                    .split(convertPoint(p1), convertPoint(p2), p -> {
+                      return impIndexMap.getProcessor().getf(p.x, p.y);
+                    });
+            iterator.set(new Pair<>(p1, newSpines[0]));
+            spines.set(i, new Pair<>(p2, newSpines[1]));
+            change = true;
+            break;
           }
         }
       }
     } while (change);
 
+    spines.forEach((spine) -> cells.add(new Cell(spine.getValue())));
     RoiManager roiManager = Utils.getRoiManager();
     roiManager.reset();
     cells.forEach(cell -> roiManager.addRoi(cell.toRoi()));
