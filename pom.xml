@@ -139,11 +139,6 @@
             <artifactId>formats-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>de.biomedical-imaging.ij</groupId>
-            <artifactId>ij_blob</artifactId>
-            <version>1.4.0</version>
-        </dependency>
-        <dependency>
             <groupId>sc.fiji</groupId>
             <artifactId>AnalyzeSkeleton_</artifactId>
         </dependency>

@@ -10,6 +10,14 @@ import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
+/**
+ * Calculate the shape index as defined in
+ * J Koenderink and A van Doorn, “Surface shape and
+ * curvature scales,” Image Vision Comput, vol. 10, no. 8,
+ * pp. 557–565, 1992
+ * https://github.com/fiji/Fiji_Plugins/blob/master/src/main/java/fiji/geom/Shape_Index_Map.java
+ * @author Johannes Schindelin
+ */
 @Plugin(type = Command.class, menuPath = "Developement>Shape index map")
 public class ShapeIndexMap implements Command {
 
