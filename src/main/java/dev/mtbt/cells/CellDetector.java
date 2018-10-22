@@ -1,6 +1,6 @@
 package dev.mtbt.cells;
 
-import dev.mtbt.Utils;
+import dev.mtbt.ImageJUtils;
 import dev.mtbt.cells.skeleton.Skeleton;
 import dev.mtbt.cells.skeleton.Spine;
 import ij.ImagePlus;
@@ -26,8 +26,6 @@ import dev.mtbt.ShapeIndexMap;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.ListIterator;
-
-import static dev.mtbt.cells.skeleton.Utils.convertPoint;
 
 @Plugin(type = Command.class, menuPath = "Developement>Cell detector")
 public class CellDetector extends InteractiveCommand implements Initializable {
@@ -159,9 +157,7 @@ public class CellDetector extends InteractiveCommand implements Initializable {
             Point p1 = spine.getKey();
             Point p2 = spines.get(i).getKey();
             Spine[] newSpines = spine.getValue()
-                    .split(convertPoint(p1), convertPoint(p2), p -> {
-                      return impIndexMap.getProcessor().getf(p.x, p.y);
-                    });
+                    .split(new dev.mtbt.graph.Point(p1), new dev.mtbt.graph.Point(p2), p -> impIndexMap.getProcessor().getf(p.x, p.y));
             iterator.set(new Pair<>(p1, newSpines[0]));
             spines.set(i, new Pair<>(p2, newSpines[1]));
             change = true;
@@ -173,7 +169,7 @@ public class CellDetector extends InteractiveCommand implements Initializable {
 
     cells.clear();
     spines.forEach((spine) -> cells.add(new Cell(spine.getValue())));
-    RoiManager roiManager = Utils.getRoiManager();
+    RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
     cells.forEach(cell -> roiManager.addRoi(cell.toRoi()));
     roiManager.runCommand("show all");
@@ -181,7 +177,7 @@ public class CellDetector extends InteractiveCommand implements Initializable {
 
 
   private void displayCells () {
-    RoiManager roiManager = Utils.getRoiManager();
+    RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
     cells.forEach(cell -> roiManager.addRoi(cell.toRoi()));
     roiManager.runCommand("show all with labels");
