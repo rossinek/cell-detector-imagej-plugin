@@ -4,7 +4,6 @@ import dev.mtbt.graph.*;
 
 import java.awt.Polygon;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static dev.mtbt.Utils.*;
 
@@ -70,7 +69,7 @@ public class Spine extends Graph {
   }
 
   public boolean overlaps (Spine spine) {
-    return commonEdges(spine.edges) > 0;
+    return commonEdges(spine.edges.toArray(new Edge[spine.edges.size()])) > 0;
   }
 
   /**
@@ -194,10 +193,10 @@ public class Spine extends Graph {
   }
 
   private int commonVertices (Edge edge) {
-    return commonVertices(Arrays.stream(new Vertex[] {edge.getV1(), edge.getV2()}).collect(Collectors.toSet()));
+    return commonVertices(new Vertex[] { edge.getV1(), edge.getV2() });
   }
 
-  private int commonVertices (Set<Vertex> vertices) {
+  private int commonVertices (Vertex[] vertices) {
     int count = 0;
     for (Vertex vertex : vertices) {
       if (this.vertices.contains(vertex)) count++;
@@ -205,7 +204,7 @@ public class Spine extends Graph {
     return count;
   }
 
-  private int commonEdges (Set<Edge> edges) {
+  private int commonEdges (Edge[] edges) {
     int count = 0;
     for (Edge edge : edges) {
       if (this.edges.contains(edge)) count++;

@@ -164,10 +164,17 @@ public class CellDetector extends InteractiveCommand implements Initializable {
       uiService.showDialog("There are no points selected.");
       return;
     }
+    System.out.println("> build skeleton...");
+
     Skeleton skeleton = new Skeleton(impIndexMap);
+
+    System.out.println("> performing search...");
 
     ArrayList<Pair<Point, Spine>> spines = new ArrayList<>();
     initialPoints.forEach((point) -> spines.add(new Pair<Point, Spine>(point, skeleton.findSpine(point))));
+
+    System.out.println("> splitting concurrent spines");
+
     boolean change;
     do {
       change = false;
@@ -179,7 +186,7 @@ public class CellDetector extends InteractiveCommand implements Initializable {
             Point p1 = spine.getKey();
             Point p2 = spines.get(i).getKey();
             Spine[] newSpines = spine.getValue()
-                    .split(new dev.mtbt.graph.Point(p1), new dev.mtbt.graph.Point(p2), p -> impIndexMap.getProcessor().getf(p.x, p.y));
+              .split(new dev.mtbt.graph.Point(p1), new dev.mtbt.graph.Point(p2), p -> impIndexMap.getProcessor().getf(p.x, p.y));
             iterator.set(new Pair<>(p1, newSpines[0]));
             spines.set(i, new Pair<>(p2, newSpines[1]));
             change = true;
@@ -189,6 +196,8 @@ public class CellDetector extends InteractiveCommand implements Initializable {
       }
     } while (change);
 
+    System.out.println("> done.");
+
     // cells.clear();
     spines.forEach((spine) -> cells.add(new Cell(spine.getValue())));
     RoiManager roiManager = ImageJUtils.getRoiManager();
@@ -196,7 +205,6 @@ public class CellDetector extends InteractiveCommand implements Initializable {
     cells.forEach(cell -> roiManager.addRoi(cell.toRoi()));
     roiManager.runCommand("show all");
   }
-
 
   // private void displayCells () {
   //   RoiManager roiManager = ImageJUtils.getRoiManager();
