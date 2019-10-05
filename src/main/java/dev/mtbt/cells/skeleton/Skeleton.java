@@ -20,9 +20,9 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 public class Skeleton extends Graph {
-  private FloatProcessor initialFp;
-  private AnalyzeSkeleton_ analyzeSkeleton;
-  private SkeletonResult skeletonResult;
+  protected FloatProcessor initialFp;
+  protected AnalyzeSkeleton_ analyzeSkeleton;
+  protected SkeletonResult skeletonResult;
 
   public Skeleton (ImagePlus imp) {
     super();

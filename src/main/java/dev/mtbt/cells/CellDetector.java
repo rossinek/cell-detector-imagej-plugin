@@ -27,6 +27,7 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.ListIterator;
 
+@SuppressWarnings("restriction")
 @Plugin(type = Command.class, menuPath = "Developement>Cell detector")
 public class CellDetector extends InteractiveCommand implements Initializable {
   @Parameter
@@ -50,6 +51,12 @@ public class CellDetector extends InteractiveCommand implements Initializable {
 
   @Parameter(label = "Select cells", callback = "selectCellsButtonClick")
   private Button selectCellsButton;
+
+  @Parameter(label = "Clear points", callback = "clearPointsButtonClick")
+  private Button clearPointsButton;
+
+  @Parameter(label = "Clear selected cells", callback = "clearSelectedCellsButtonClick")
+  private Button clearSelectedCellsButton;
 
   @Parameter(label = "Run!", callback = "runButtonClick")
   private Button doneButton;
@@ -92,6 +99,21 @@ public class CellDetector extends InteractiveCommand implements Initializable {
       impIndexMap.deleteRoi();
     }
     Toolbar.getInstance().setTool(Toolbar.POINT);
+  }
+
+  protected void clearPointsButtonClick () {
+    System.out.println("> clearPointsButtonClick");
+    if (impIndexMap != null) {
+      impIndexMap.deleteRoi();
+    }
+  }
+
+  protected void clearSelectedCellsButtonClick () {
+    System.out.println("> clearSelectedCellsButtonClick");
+    cells.clear();
+    RoiManager roiManager = ImageJUtils.getRoiManager();
+    roiManager.reset();
+    roiManager.runCommand("show all");
   }
 
   protected void runButtonClick () {
@@ -145,7 +167,7 @@ public class CellDetector extends InteractiveCommand implements Initializable {
     Skeleton skeleton = new Skeleton(impIndexMap);
 
     ArrayList<Pair<Point, Spine>> spines = new ArrayList<>();
-    initialPoints.forEach((point) -> spines.add(new Pair(point, skeleton.findSpine(point))));
+    initialPoints.forEach((point) -> spines.add(new Pair<Point, Spine>(point, skeleton.findSpine(point))));
     boolean change;
     do {
       change = false;
@@ -167,7 +189,7 @@ public class CellDetector extends InteractiveCommand implements Initializable {
       }
     } while (change);
 
-    cells.clear();
+    // cells.clear();
     spines.forEach((spine) -> cells.add(new Cell(spine.getValue())));
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
@@ -176,10 +198,10 @@ public class CellDetector extends InteractiveCommand implements Initializable {
   }
 
 
-  private void displayCells () {
-    RoiManager roiManager = ImageJUtils.getRoiManager();
-    roiManager.reset();
-    cells.forEach(cell -> roiManager.addRoi(cell.toRoi()));
-    roiManager.runCommand("show all with labels");
-  }
+  // private void displayCells () {
+  //   RoiManager roiManager = ImageJUtils.getRoiManager();
+  //   roiManager.reset();
+  //   cells.forEach(cell -> roiManager.addRoi(cell.toRoi()));
+  //   roiManager.runCommand("show all with labels");
+  // }
 }

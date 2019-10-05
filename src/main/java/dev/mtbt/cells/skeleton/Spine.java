@@ -1,6 +1,5 @@
 package dev.mtbt.cells.skeleton;
 
-import dev.mtbt.Utils;
 import dev.mtbt.graph.*;
 
 import java.awt.Polygon;
