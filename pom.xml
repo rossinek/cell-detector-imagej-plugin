@@ -27,7 +27,7 @@
     <parent>
         <groupId>org.scijava</groupId>
         <artifactId>pom-scijava</artifactId>
-        <version>19.2.0</version>
+        <version>27.0.1</version>
         <relativePath/>
     </parent>
 
@@ -57,10 +57,10 @@
         </mailingList>
     </mailingLists>
     <scm>
-        <connection>scm:git:git://github.com/rossinek/repo</connection>
-        <developerConnection>scm:git:git@rossinek/repo</developerConnection>
+        <connection>scm:git://github.com/rossinek/ii-bio-tech-plugin.git</connection>
+        <developerConnection>scm:git@rossinek/ii-bio-tech-plugin.git</developerConnection>
         <tag>HEAD</tag>
-        <url>https://github.com/rossinek/repo</url>
+        <url>https://github.com/rossinek/ii-bio-tech-plugin</url>
     </scm>
     <issueManagement>
         <system>GitHub Issues</system>
@@ -126,13 +126,13 @@
         <dependency>
             <groupId>ome</groupId>
             <artifactId>bio-formats_plugins</artifactId>
-            <exclusions>
-                <!-- NB: Guava requires Java 7+, so we exclude it here. -->
+            <!-- <exclusions>
+                NB: Guava requires Java 7+, so we exclude it here.
                 <exclusion>
                     <groupId>com.google.guava</groupId>
                     <artifactId>guava</artifactId>
                 </exclusion>
-            </exclusions>
+            </exclusions> -->
         </dependency>
         <dependency>
             <groupId>ome</groupId>

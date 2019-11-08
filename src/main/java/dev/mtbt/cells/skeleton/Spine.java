@@ -1,5 +1,6 @@
 package dev.mtbt.cells.skeleton;
 
+import dev.mtbt.cells.ICellFrame;
 import dev.mtbt.graph.*;
 
 import java.awt.Polygon;
@@ -7,16 +8,17 @@ import java.util.*;
 
 import static dev.mtbt.Utils.*;
 
-public class Spine extends Graph {
+public class Spine extends Graph implements ICellFrame {
 
   private SpineVertex e1 = null;
   private SpineVertex e2 = null;
 
-  public Spine () {
+  public Spine() {
     super();
   }
 
-  public Polygon toPolyLine () {
+  @Override
+  public Polygon toPolyline() {
     ArrayList<Point> points = new ArrayList<>();
     if (this.e1 != null) {
       points = this.toPath().toSlabs(true);
@@ -31,15 +33,15 @@ public class Spine extends Graph {
     return new Polygon(xpoints, ypoints, points.size());
   }
 
-  private Path toPath () {
+  private Path toPath() {
     return new Path(this.e1, this.e2, this.e1.getBranches().first(), this.e2.getBranches().first());
   }
 
-  public void traverse (GraphTraverser t) {
+  public void traverse(GraphTraverser t) {
     traverse(this.e1, this.e1.getBranches().first(), t);
   }
 
-  public void traverse (SpineVertex begin, Edge firstEdge, GraphTraverser t) {
+  public void traverse(SpineVertex begin, Edge firstEdge, GraphTraverser t) {
     SpineVertex current = begin;
     Edge nextEdge = firstEdge;
     while (true) {
@@ -52,7 +54,7 @@ public class Spine extends Graph {
   }
 
   @Override
-  public Edge addEdge (Edge e) {
+  public Edge addEdge(Edge e) {
     validateNewEdge(e);
     SpineVertex v1 = (SpineVertex) this.addVertex(new SpineVertex(e.getV1()));
     SpineVertex v2 = (SpineVertex) this.addVertex(new SpineVertex(e.getV2()));
@@ -68,15 +70,17 @@ public class Spine extends Graph {
     return super.addEdge(edge);
   }
 
-  public boolean overlaps (Spine spine) {
+  public boolean overlaps(Spine spine) {
     return commonEdges(spine.edges.toArray(new Edge[spine.edges.size()])) > 0;
   }
 
   /**
    * Split Spine in the weakest point between points
-   * @return array containing two spines: first containing p1, second containing p2
+   *
+   * @return array containing two spines: first containing p1, second containing
+   *         p2
    */
-  public Spine[] split (Point p1, Point p2, PointEvaluator pointEvaluator) {
+  public Spine[] split(Point p1, Point p2, PointEvaluator pointEvaluator) {
     Edge e1 = this.closestEdge(p1);
     Edge e2 = this.closestEdge(p2);
     ArrayList<Point> points = findPath(e1, e2).toSlabs(false);
@@ -108,11 +112,12 @@ public class Spine extends Graph {
       }
     }
     Spine[] spines = split(weakestPoint);
-    if (index1 > index2) Collections.reverse(Arrays.asList(spines));
+    if (index1 > index2)
+      Collections.reverse(Arrays.asList(spines));
     return spines;
   }
 
-  private Spine[] split (Point slab) {
+  private Spine[] split(Point slab) {
     Edge edge = findEdge(slab);
     Edge[] newEdges = this.splitEdge(edge, slab);
     Spine[] spines = new Spine[2];
@@ -130,13 +135,13 @@ public class Spine extends Graph {
     return spines;
   }
 
-  private Edge[] splitEdge (Edge e, Point slab) {
+  private Edge[] splitEdge(Edge e, Point slab) {
     int index = e.getSlabs().indexOf(slab);
     ArrayList<Point> slabs1 = new ArrayList<>();
     ArrayList<Point> slabs2 = new ArrayList<>();
     if (index >= 0) {
       slabs1.addAll(e.getSlabs().subList(0, index));
-      slabs2.addAll(e.getSlabs().subList(index+1, e.getSlabs().size()));
+      slabs2.addAll(e.getSlabs().subList(index + 1, e.getSlabs().size()));
     }
     Vertex vSlab1 = new SpineVertex();
     vSlab1.addPoint(slab);
@@ -151,12 +156,14 @@ public class Spine extends Graph {
   /**
    * Extend spine based on original graph
    */
-  public void extend (EdgeEvaluator edgeEvaluator) {
-    while (extend(e1, edgeEvaluator));
-    while (extend(e2, edgeEvaluator));
+  public void extend(EdgeEvaluator edgeEvaluator) {
+    while (extend(e1, edgeEvaluator))
+      ;
+    while (extend(e2, edgeEvaluator))
+      ;
   }
 
-  private Edge strongestValidEdge (Set<Edge> candidates, Vertex start, EdgeEvaluator edgeEvaluator) {
+  private Edge strongestValidEdge(Set<Edge> candidates, Vertex start, EdgeEvaluator edgeEvaluator) {
     double bestScore = Double.NEGATIVE_INFINITY;
     Edge bestEdge = null;
     for (Edge candidate : candidates) {
@@ -171,57 +178,67 @@ public class Spine extends Graph {
     return bestEdge;
   }
 
-  public boolean extend (Vertex endpoint, EdgeEvaluator edgeEvaluator) {
+  public boolean extend(Vertex endpoint, EdgeEvaluator edgeEvaluator) {
     Vertex endpointOrigin;
-    if (this.e1.equals(endpoint)) endpointOrigin = this.e1.getSkeletonVertex();
-    else if (this.e2.equals(endpoint)) endpointOrigin = this.e2.getSkeletonVertex();
-    else throw new IllegalArgumentException("Vertex is not spline endpoint");
-    if (endpointOrigin.isLeaf()) return false;
+    if (this.e1.equals(endpoint))
+      endpointOrigin = this.e1.getSkeletonVertex();
+    else if (this.e2.equals(endpoint))
+      endpointOrigin = this.e2.getSkeletonVertex();
+    else
+      throw new IllegalArgumentException("Vertex is not spline endpoint");
+    if (endpointOrigin.isLeaf())
+      return false;
     Edge newEdge = strongestValidEdge(endpointOrigin.getBranches(), endpoint, edgeEvaluator);
-    if (newEdge == null) return false;
+    if (newEdge == null)
+      return false;
     return addEdge(newEdge) != null;
   }
 
-  private void validateNewEdge (Edge e) {
-    if (this.edges.size() == 0) return;
+  private void validateNewEdge(Edge e) {
+    if (this.edges.size() == 0)
+      return;
     if (commonVertices(e) > 1) {
       throw new IllegalArgumentException("Edge is creating cycle in Spine");
     }
-    if (!e.getV1().equals(this.e1) && !e.getV1().equals(this.e2) && !e.getV2().equals(this.e1) && !e.getV2().equals(this.e2)) {
+    if (!e.getV1().equals(this.e1) && !e.getV1().equals(this.e2) && !e.getV2().equals(this.e1)
+        && !e.getV2().equals(this.e2)) {
       throw new IllegalArgumentException("Edge is not connected with Spine endpoints");
     }
   }
 
-  private int commonVertices (Edge edge) {
+  private int commonVertices(Edge edge) {
     return commonVertices(new Vertex[] { edge.getV1(), edge.getV2() });
   }
 
-  private int commonVertices (Vertex[] vertices) {
+  private int commonVertices(Vertex[] vertices) {
     int count = 0;
     for (Vertex vertex : vertices) {
-      if (this.vertices.contains(vertex)) count++;
+      if (this.vertices.contains(vertex))
+        count++;
     }
     return count;
   }
 
-  private int commonEdges (Edge[] edges) {
+  private int commonEdges(Edge[] edges) {
     int count = 0;
     for (Edge edge : edges) {
-      if (this.edges.contains(edge)) count++;
+      if (this.edges.contains(edge))
+        count++;
     }
     return count;
   }
 
-  private Edge findEdge (Point slab) {
+  private Edge findEdge(Point slab) {
     for (Edge edge : edges) {
       for (Point p : edge.getSlabs()) {
-        if (p.equals(slab)) return edge;
+        if (p.equals(slab))
+          return edge;
       }
     }
     return null;
   }
 
-  private Path findPath (Edge e1, Edge e2) {
+  private Path findPath(Edge e1, Edge e2) {
     if (e1.equals(e2)) {
       return new Path((SpineVertex) e1.getV1(), (SpineVertex) e1.getV2(), e1, e2);
     }
@@ -232,13 +249,16 @@ public class Spine extends Graph {
       path = findPath((SpineVertex) e1.getV1(), (SpineVertex) e2.getV2());
     }
 
-    if (path == null) return null;
-    if (!path.getFirstEdge().equals(e1)) path.extendBegin();
-    if (!path.getLastEdge().equals(e2)) path.extendEnd();
+    if (path == null)
+      return null;
+    if (!path.getFirstEdge().equals(e1))
+      path.extendBegin();
+    if (!path.getLastEdge().equals(e2))
+      path.extendEnd();
     return path;
   }
 
-  private Path findPath (SpineVertex v1, SpineVertex v2) {
+  private Path findPath(SpineVertex v1, SpineVertex v2) {
     for (Edge branch : v1.getBranches()) {
       SpineVertex current = v1;
       Edge nextEdge = branch;
@@ -247,7 +267,8 @@ public class Spine extends Graph {
         if (current.equals(v2)) {
           return new Path(v1, v2, branch, nextEdge);
         }
-        if (current.isLeaf()) break;
+        if (current.isLeaf())
+          break;
         nextEdge = current.getOppositeBranch(nextEdge);
       }
     }
@@ -260,61 +281,78 @@ public class Spine extends Graph {
     private Edge firstEdge;
     private Edge lastEdge;
 
-    public Path (SpineVertex begin, SpineVertex end, Edge firstEdge, Edge lastEdge) {
+    public Path(SpineVertex begin, SpineVertex end, Edge firstEdge, Edge lastEdge) {
       this.begin = begin;
       this.end = end;
       this.firstEdge = firstEdge;
       this.lastEdge = lastEdge;
     }
 
-    public SpineVertex getBegin () {
+    public SpineVertex getBegin() {
       return begin;
     }
 
-    public SpineVertex getEnd () {
+    public SpineVertex getEnd() {
       return end;
     }
 
-    public Edge getFirstEdge () {
+    public Edge getFirstEdge() {
       return firstEdge;
     }
 
-    public Edge getLastEdge () {
+    public Edge getLastEdge() {
       return lastEdge;
     }
 
-    public void extendBegin () {
+    public void extendBegin() {
       if (!begin.isLeaf()) {
         firstEdge = begin.getOppositeBranch(firstEdge);
         begin = (SpineVertex) firstEdge.getOppositeVertex(begin);
       }
     }
 
-    public void extendEnd () {
+    public void extendEnd() {
       if (!end.isLeaf()) {
         lastEdge = end.getOppositeBranch(lastEdge);
         end = (SpineVertex) lastEdge.getOppositeVertex(end);
       }
     }
 
-    public ArrayList<Point> toSlabs (boolean addEndpoints) {
+    public ArrayList<Point> toSlabs(boolean addEndpoints) {
       ArrayList<Point> points = new ArrayList<>();
 
-      if (addEndpoints) points.add(begin.center());
+      if (addEndpoints)
+        points.add(begin.center());
       traverse((v1, v2, e) -> points.addAll(e.getDirectedSlabs(v1)));
-      if (addEndpoints) points.add(end.center());
+      if (addEndpoints)
+        points.add(end.center());
       return points;
     }
 
-    public void traverse (GraphTraverser t) {
+    public void traverse(GraphTraverser t) {
       SpineVertex current = begin;
       Edge nextEdge = firstEdge;
       while (true) {
         t.callback(current, nextEdge.getOppositeVertex(current), nextEdge);
         current = (SpineVertex) nextEdge.getOppositeVertex(current);
-        if (current.equals(end)) break;
+        if (current.equals(end))
+          break;
         nextEdge = current.getOppositeBranch(nextEdge);
       }
     }
+  }
+
+  @Override
+  public java.awt.Point getBegin() {
+    if (this.e1 == null)
+      return null;
+    return this.e1.getSkeletonVertex().center().toAwtPoint();
+  }
+
+  @Override
+  public java.awt.Point getEnd() {
+    if (this.e2 == null)
+      return null;
+    return this.e2.getSkeletonVertex().center().toAwtPoint();
   }
 }

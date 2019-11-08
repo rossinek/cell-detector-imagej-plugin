@@ -23,6 +23,10 @@ public class Point implements Comparable<Point> {
     this(p.x, p.y);
   }
 
+  public java.awt.Point toAwtPoint() {
+    return new java.awt.Point(x, y);
+  }
+
   @Override
   public String toString () {
     return "(" + this.x + ", " + this.y + ")";

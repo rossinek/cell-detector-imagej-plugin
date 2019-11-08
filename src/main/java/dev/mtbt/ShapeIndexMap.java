@@ -18,7 +18,7 @@ import org.scijava.plugin.Plugin;
  * https://github.com/fiji/Fiji_Plugins/blob/master/src/main/java/fiji/geom/Shape_Index_Map.java
  * @author Johannes Schindelin
  */
-@Plugin(type = Command.class, menuPath = "Developement>Shape index map")
+@Plugin(type = Command.class, menuPath = "Developement>Utils>Shape index map")
 public class ShapeIndexMap implements Command {
 
   /**
