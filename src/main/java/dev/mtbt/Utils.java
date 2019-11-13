@@ -5,11 +5,11 @@ import dev.mtbt.graph.*;
 import java.util.*;
 
 public class Utils {
-  public static double distance (Point p0, Point p1) {
+  public static double distance(Point p0, Point p1) {
     return Math.sqrt(((p0.x - p1.x) * (p0.x - p1.x) + (p0.y - p1.y) * (p0.y - p1.y)));
   }
 
-  public static double distance (Point point, Set<Point> points) {
+  public static double distance(Point point, Set<Point> points) {
     double bestDistance = Double.NEGATIVE_INFINITY;
     for (Point p : points) {
       double dist = distance(point, p);
@@ -27,7 +27,7 @@ public class Utils {
    * @param p  point
    * @return
    */
-  public static double perpendicularDistance (Point l1, Point l2, Point p) {
+  public static double perpendicularDistance(Point l1, Point l2, Point p) {
     double dy = l2.y - l1.y;
     double dx = l2.x - l1.x;
     double numerator = Math.abs(dy * p.x - dx * p.y + l2.x * l1.y - l2.y * l1.x);
@@ -42,7 +42,7 @@ public class Utils {
    * @param tolerance tolerance of simplification
    * @return simplified poly line
    */
-  public static ArrayList<Point> simplifyPolyLineOneWay (List<Point> polyLine, double tolerance) {
+  public static ArrayList<Point> simplifyPolyLineOneWay(List<Point> polyLine, double tolerance) {
     double maxDistance = 0;
     int maxIndex = 0;
 
@@ -60,7 +60,8 @@ public class Utils {
     ArrayList<Point> results = new ArrayList<>();
     if (maxDistance > tolerance) {
       results.addAll(simplifyPolyLineOneWay(polyLine.subList(0, maxIndex), tolerance));
-      results.addAll(simplifyPolyLineOneWay(polyLine.subList(maxIndex, polyLine.size()), tolerance));
+      results
+          .addAll(simplifyPolyLineOneWay(polyLine.subList(maxIndex, polyLine.size()), tolerance));
     } else if (polyLine.size() > 1) {
       results.add(polyLine.get(0));
       results.add(polyLine.get(polyLine.size() - 1));
@@ -70,7 +71,7 @@ public class Utils {
     return results;
   }
 
-  public static ArrayList<Point> simplifyPolyLine (List<Point> polyLine, double tolerance) {
+  public static ArrayList<Point> simplifyPolyLine(List<Point> polyLine, double tolerance) {
     ArrayList<Point> result = simplifyPolyLineOneWay(polyLine, tolerance);
     Collections.reverse(result);
     return simplifyPolyLineOneWay(result, tolerance);

@@ -9,11 +9,11 @@ import static java.util.stream.Collectors.toList;
 public class SpineVertex extends Vertex {
   private Vertex skeletonVertex = null;
 
-  public SpineVertex () {
+  public SpineVertex() {
     super();
   }
 
-  public SpineVertex (Vertex origin) {
+  public SpineVertex(Vertex origin) {
     super();
     if (origin != null) {
       this.points.addAll(origin.getPoints());
@@ -21,29 +21,30 @@ public class SpineVertex extends Vertex {
     }
   }
 
-  public boolean isSkeletonVertex () {
+  public boolean isSkeletonVertex() {
     return this.skeletonVertex != null;
   }
 
-  public Edge getOppositeBranch (Edge e) {
-    if (this.branches.size() < 2) return null;
+  public Edge getOppositeBranch(Edge e) {
+    if (this.branches.size() < 2)
+      return null;
     return this.branches.first().equals(e) ? this.branches.last() : this.branches.first();
   }
 
-  public Vertex getSkeletonVertex () {
+  public Vertex getSkeletonVertex() {
     return this.skeletonVertex;
   }
 
   @Override
-  public void setBranch (Edge e) {
+  public void setBranch(Edge e) {
     // if (isSkeletonVertex() && !this.skeletonVertex.getBranches().contains(e)) {
-    //   throw new IllegalArgumentException("Edge is not the part of spine's skeleton");
+    // throw new IllegalArgumentException("Edge is not the part of spine's skeleton");
     // }
     this.branches.add(e);
   }
 
   @Override
-  public Vertex cloneUnconnected () {
+  public Vertex cloneUnconnected() {
     final SpineVertex clone = new SpineVertex(this.skeletonVertex);
     clone.points.clear();
     clone.points.addAll(points.stream().map(Point::clone).collect(toList()));

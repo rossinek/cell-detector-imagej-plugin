@@ -1,14 +1,14 @@
 package dev.mtbt.cells.skeleton;
 
-import dev.mtbt.cells.ICellFrame;
 import dev.mtbt.graph.*;
 
-import java.awt.Polygon;
+import java.awt.geom.Point2D;
 import java.util.*;
+import java.util.stream.Collectors;
 
-import static dev.mtbt.Utils.*;
+import dev.mtbt.Utils;
 
-public class Spine extends Graph implements ICellFrame {
+public class Spine extends Graph {
 
   private SpineVertex e1 = null;
   private SpineVertex e2 = null;
@@ -17,20 +17,13 @@ public class Spine extends Graph implements ICellFrame {
     super();
   }
 
-  @Override
-  public Polygon toPolyline() {
+  public List<Point2D> toPolyline() {
     ArrayList<Point> points = new ArrayList<>();
     if (this.e1 != null) {
       points = this.toPath().toSlabs(true);
-      points = simplifyPolyLine(points, 2);
+      points = Utils.simplifyPolyLine(points, 2);
     }
-    int xpoints[] = new int[points.size()];
-    int ypoints[] = new int[points.size()];
-    for (int i = 0; i < points.size(); i++) {
-      xpoints[i] = points.get(i).x;
-      ypoints[i] = points.get(i).y;
-    }
-    return new Polygon(xpoints, ypoints, points.size());
+    return points.stream().map(p -> p.toPoint2D()).collect(Collectors.toCollection(ArrayList::new));
   }
 
   private Path toPath() {
@@ -77,8 +70,7 @@ public class Spine extends Graph implements ICellFrame {
   /**
    * Split Spine in the weakest point between points
    *
-   * @return array containing two spines: first containing p1, second containing
-   *         p2
+   * @return array containing two spines: first containing p1, second containing p2
    */
   public Spine[] split(Point p1, Point p2, PointEvaluator pointEvaluator) {
     Edge e1 = this.closestEdge(p1);
@@ -89,12 +81,12 @@ public class Spine extends Graph implements ICellFrame {
     int index1 = -1, index2 = -1;
     double dist;
     for (int i = 0; i < points.size(); i++) {
-      dist = distance(p1, points.get(i));
+      dist = Utils.distance(p1, points.get(i));
       if (dist < minDist1) {
         minDist1 = dist;
         index1 = i;
       }
-      dist = distance(p2, points.get(i));
+      dist = Utils.distance(p2, points.get(i));
       if (dist < minDist2) {
         minDist2 = dist;
         index2 = i;
@@ -126,7 +118,8 @@ public class Spine extends Graph implements ICellFrame {
       Spine spine = new Spine();
       spines[i] = spine;
       spine.addEdge(newBranch);
-      SpineVertex start = (SpineVertex) (newBranch.isIncidentTo(edge.getV1()) ? edge.getV1() : edge.getV2());
+      SpineVertex start =
+          (SpineVertex) (newBranch.isIncidentTo(edge.getV1()) ? edge.getV1() : edge.getV2());
       if (!start.isLeaf()) {
         Edge firstEdge = start.getOppositeBranch(edge);
         traverse(start, firstEdge, (v1, v2, e) -> spine.addEdge(e));
@@ -150,17 +143,15 @@ public class Spine extends Graph implements ICellFrame {
     Vertex v2 = e.getV2().cloneUnconnected();
     Edge edge1 = new Edge(vSlab1, v1, slabs1);
     Edge edge2 = new Edge(vSlab2, v2, slabs2);
-    return new Edge[] { edge1, edge2 };
+    return new Edge[] {edge1, edge2};
   }
 
   /**
    * Extend spine based on original graph
    */
   public void extend(EdgeEvaluator edgeEvaluator) {
-    while (extend(e1, edgeEvaluator))
-      ;
-    while (extend(e2, edgeEvaluator))
-      ;
+    while (extend(e1, edgeEvaluator));
+    while (extend(e2, edgeEvaluator));
   }
 
   private Edge strongestValidEdge(Set<Edge> candidates, Vertex start, EdgeEvaluator edgeEvaluator) {
@@ -207,7 +198,7 @@ public class Spine extends Graph implements ICellFrame {
   }
 
   private int commonVertices(Edge edge) {
-    return commonVertices(new Vertex[] { edge.getV1(), edge.getV2() });
+    return commonVertices(new Vertex[] {edge.getV1(), edge.getV2()});
   }
 
   private int commonVertices(Vertex[] vertices) {
@@ -275,6 +266,18 @@ public class Spine extends Graph implements ICellFrame {
     return null;
   }
 
+  public java.awt.geom.Point2D.Double getBegin() {
+    if (this.e1 == null)
+      return null;
+    return this.e1.getSkeletonVertex().center().toPoint2D();
+  }
+
+  public java.awt.geom.Point2D.Double getEnd() {
+    if (this.e2 == null)
+      return null;
+    return this.e2.getSkeletonVertex().center().toPoint2D();
+  }
+
   class Path {
     private SpineVertex begin;
     private SpineVertex end;
@@ -340,19 +343,5 @@ public class Spine extends Graph implements ICellFrame {
         nextEdge = current.getOppositeBranch(nextEdge);
       }
     }
-  }
-
-  @Override
-  public java.awt.Point getBegin() {
-    if (this.e1 == null)
-      return null;
-    return this.e1.getSkeletonVertex().center().toAwtPoint();
-  }
-
-  @Override
-  public java.awt.Point getEnd() {
-    if (this.e2 == null)
-      return null;
-    return this.e2.getSkeletonVertex().center().toAwtPoint();
   }
 }

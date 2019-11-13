@@ -1,5 +1,6 @@
 package dev.mtbt.cells.skeleton;
 
+import dev.mtbt.Utils;
 import dev.mtbt.graph.Graph;
 import dev.mtbt.graph.Edge;
 import dev.mtbt.graph.Point;
@@ -14,7 +15,6 @@ import sc.fiji.skeletonize3D.Skeletonize3D_;
 import java.util.*;
 import java.util.function.Function;
 
-import static dev.mtbt.Utils.distance;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
@@ -24,7 +24,7 @@ public class Skeleton extends Graph {
   protected AnalyzeSkeleton_ analyzeSkeleton;
   protected SkeletonResult skeletonResult;
 
-  public Skeleton (ImagePlus imp) {
+  public Skeleton(ImagePlus imp) {
     super();
     initialFp = imp.getProcessor().convertToFloatProcessor();
     ImagePlus impSkeleton = new ImagePlus("skeleton", imp.getProcessor().convertToByteProcessor());
@@ -35,13 +35,15 @@ public class Skeleton extends Graph {
 
     analyzeSkeleton = new AnalyzeSkeleton_();
     analyzeSkeleton.setup("", impSkeleton);
-    skeletonResult = analyzeSkeleton.run(AnalyzeSkeleton_.NONE, false, false, impSkeleton, true, false);
+    skeletonResult =
+        analyzeSkeleton.run(AnalyzeSkeleton_.NONE, false, false, impSkeleton, true, false);
 
     // Clone all graphs to create skeleton
     Set<Graph> graphs = Arrays.stream(analyzeSkeleton.getGraphs()).map(Graph::new).collect(toSet());
     Map<Vertex, Vertex> vertexMap = new HashMap<>();
     Map<Edge, Edge> edgeMap = new HashMap<>();
-    graphs.forEach(g -> vertexMap.putAll(g.getVertices().stream().collect(toMap(identity(), Vertex::cloneUnconnected))));
+    graphs.forEach(g -> vertexMap
+        .putAll(g.getVertices().stream().collect(toMap(identity(), Vertex::cloneUnconnected))));
     Function<Edge, Edge> cloner = e -> e.clone(vertexMap.get(e.getV1()), vertexMap.get(e.getV2()));
     graphs.forEach(g -> edgeMap.putAll(g.getEdges().stream().collect(toMap(identity(), cloner))));
     edgeMap.keySet().stream().map(edgeMap::get).forEach(this::addEdge);
@@ -54,7 +56,7 @@ public class Skeleton extends Graph {
    * @param initialPoint should lay on skeleton
    * @return poly line containing point
    */
-  public Spine findSpine (java.awt.Point initialPoint) {
+  public Spine findSpine(java.awt.Point initialPoint) {
     Edge initialEdge = this.closestEdge(new Point(initialPoint));
     Spine spine = new Spine();
     if (initialEdge != null) {
@@ -63,7 +65,7 @@ public class Skeleton extends Graph {
         final double RADIUS = 10;
         double lowestValue = Double.POSITIVE_INFINITY;
         for (Point slab : edge.getSlabs()) {
-          double dist = distance(slab, start.getPoints());
+          double dist = Utils.distance(slab, start.getPoints());
           if (dist > RADIUS)
             continue;
           lowestValue = Math.min(initialFp.getf(slab.x, slab.y), lowestValue);
@@ -74,7 +76,7 @@ public class Skeleton extends Graph {
     return spine;
   }
 
-  public ImagePlus toImagePlus () {
+  public ImagePlus toImagePlus() {
     ByteProcessor skeleton = (ByteProcessor) analyzeSkeleton.getResultImage(false).getProcessor(1);
     return new ImagePlus("Skeleton", skeleton);
   }

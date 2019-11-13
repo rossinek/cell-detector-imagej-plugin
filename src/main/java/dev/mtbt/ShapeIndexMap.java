@@ -11,11 +11,10 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
 /**
- * Calculate the shape index as defined in
- * J Koenderink and A van Doorn, “Surface shape and
- * curvature scales,” Image Vision Comput, vol. 10, no. 8,
- * pp. 557–565, 1992
+ * Calculate the shape index as defined in J Koenderink and A van Doorn, “Surface shape and
+ * curvature scales,” Image Vision Comput, vol. 10, no. 8, pp. 557–565, 1992
  * https://github.com/fiji/Fiji_Plugins/blob/master/src/main/java/fiji/geom/Shape_Index_Map.java
+ * 
  * @author Johannes Schindelin
  */
 @Plugin(type = Command.class, menuPath = "Developement>Utils>Shape index map")
@@ -33,7 +32,7 @@ public class ShapeIndexMap implements Command {
    * Main plugin method invoked by ImageJ.
    */
   @Override
-  public void run () {
+  public void run() {
     final GenericDialog gd = new GenericDialog("Shape index map");
     gd.addNumericField("Gaussian_blur_radius (0 = off)", 0, 0);
     gd.showDialog();
@@ -42,7 +41,7 @@ public class ShapeIndexMap implements Command {
     }
   }
 
-  public static ImagePlus getShapeIndexMap (final ImagePlus image, final double gaussianBlurRadius) {
+  public static ImagePlus getShapeIndexMap(final ImagePlus image, final double gaussianBlurRadius) {
     final ImageStack stack = image.getStack();
     final ImageStack result = new ImageStack(image.getWidth(), image.getHeight());
     for (int i = 1; i <= stack.getSize(); i++) {
@@ -69,16 +68,16 @@ public class ShapeIndexMap implements Command {
    *                     sqrt((dnx_x - dny_y)^2 + 4 dny_x dnx_y)
    * </pre>
    * <p>
-   * where _x and _y are the x and y components of the partial derivatives of
-   * the normal vector of the surface defined by the intensities of the image.
+   * where _x and _y are the x and y components of the partial derivatives of the normal vector of
+   * the surface defined by the intensities of the image.
    * <p>
-   * n_x and n_y are the negative partial derivatives of the intensity,
-   * approximated by simple differences.
+   * n_x and n_y are the negative partial derivatives of the intensity, approximated by simple
+   * differences.
    *
    * @param ip the source image processor.
    * @return the shape index in a new image processor.
    */
-  private static ImageProcessor getShapeIndex (final ImageProcessor ip) {
+  private static ImageProcessor getShapeIndex(final ImageProcessor ip) {
     final ImageProcessor dx = deriveX(ip);
     final ImageProcessor dy = deriveY(ip);
     final ImageProcessor dxx = deriveX(dx);
@@ -102,7 +101,7 @@ public class ShapeIndexMap implements Command {
     return fp;
   }
 
-  private static ImageProcessor deriveX (final ImageProcessor ip) {
+  private static ImageProcessor deriveX(final ImageProcessor ip) {
     final int w = ip.getWidth(), h = ip.getHeight();
     final FloatProcessor fp = new FloatProcessor(w, h);
     for (int j = 0; j < h; j++) {
@@ -116,7 +115,7 @@ public class ShapeIndexMap implements Command {
     return fp;
   }
 
-  private static ImageProcessor deriveY (final ImageProcessor ip) {
+  private static ImageProcessor deriveY(final ImageProcessor ip) {
     final int w = ip.getWidth(), h = ip.getHeight();
     final FloatProcessor fp = new FloatProcessor(w, h);
     for (int i = 0; i < w; i++) {

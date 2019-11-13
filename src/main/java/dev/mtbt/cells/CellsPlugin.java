@@ -1,5 +1,6 @@
 package dev.mtbt.cells;
 
+import ij.ImageListener;
 import ij.ImagePlus;
 import ij.plugin.frame.RoiManager;
 
@@ -15,63 +16,77 @@ import org.scijava.ui.UIService;
 import org.scijava.widget.Button;
 
 import dev.mtbt.ImageJUtils;
-import dev.mtbt.cells.skeleton.CellDetector;
+import dev.mtbt.cells.skeleton.SkeletonCellDetector;
+import dev.mtbt.cells.skeleton.SkeletonCellLifeTracker;
 
 @Plugin(type = Command.class, menuPath = "Developement>Main Plugin")
-public class CellsPlugin extends InteractiveCommand implements Initializable {
-
-  private List<Cell<ICellFrame>> cells;
-
+public class CellsPlugin extends InteractiveCommand implements Initializable, ImageListener {
   @Parameter
   private ImagePlus imp;
 
   @Parameter
   private UIService uiService;
 
-  // DIALOG INPUTS
-  @Parameter(label = "Select detector", choices = { "skeleton.CellDetector" })
+  @Parameter(label = "Select detector", choices = {"SkeletonCellDetector"})
   private String detector = null;
 
-  @Parameter(label = "Run detector", callback = "onRunClick")
-  private Button runButton;
+  @Parameter(label = "Run detector", callback = "runDetector")
+  private Button runDetectorButton;
 
-  @Parameter(label = "Show!", callback = "onShowClick")
-  private Button showButton;
+  @Parameter(label = "Select life tracker", choices = {"SkeletonCellLifeTracker"})
+  private String lifeTracker = null;
+
+  @Parameter(label = "Run life tracker", callback = "runLifeTracker")
+  private Button runLifeTrackerButton;
+
+  private PluginState state = PluginState.Detection;
+
+  private List<Cell> cells;
 
   @Override
   public void initialize() {
-    System.out.println("[CellsPlugin] initialize");
+    ImagePlus.addImageListener(this);
     if (imp == null)
       return;
   }
 
   @Override
   public void run() {
-    System.out.println("[CellsPlugin] run");
   }
 
   @Override
   public void preview() {
-    System.out.println("[CellsPlugin] preview");
+    switch (this.state) {
+      case Detection:
+        break;
+      case LifeTracking:
+      case Idle:
+        this.displayCells();
+        break;
+    }
   }
 
-  protected void onRunClick() {
+  protected void runDetector() {
     if (detector == null) {
       uiService.showDialog("Select detector first");
       return;
     }
     Thread t = new Thread(() -> {
       try {
-        System.out.println(">>> run <<<");
-        final ModuleService moduleService = this.getContext().service(ModuleService.class);
-        final CommandService commandService = this.getContext().service(CommandService.class);
+        final ModuleService ms = this.getContext().service(ModuleService.class);
+        final CommandService cs = this.getContext().service(CommandService.class);
+        CellDetector cellDetector;
         switch (detector) {
-          case "skeleton.CellDetector":
-            this.cells = ((CellDetector) moduleService.run(commandService.getCommand(CellDetector.class), true).get()).output().get();
+          case "SkeletonCellDetector":
+            cellDetector =
+                (CellDetector) ms.run(cs.getCommand(SkeletonCellDetector.class), true).get();
             break;
           default:
             uiService.showDialog("No such detector");
+            return;
         }
+        this.cells = cellDetector.output().get();
+        this.onDetectionEnd();
       } catch (Exception e) {
         e.printStackTrace();
       }
@@ -79,14 +94,78 @@ public class CellsPlugin extends InteractiveCommand implements Initializable {
     t.start();
   }
 
-  protected void onShowClick() {
+  protected void runLifeTracker() {
+    if (lifeTracker == null) {
+      uiService.showDialog("Select life tracker first");
+      return;
+    }
+    Thread t = new Thread(() -> {
+      try {
+        final ModuleService ms = this.getContext().service(ModuleService.class);
+        final CommandService cs = this.getContext().service(CommandService.class);
+        CellLifeTracker cellLifeTracker;
+        switch (lifeTracker) {
+          case "SkeletonCellLifeTracker":
+            cellLifeTracker =
+                (CellLifeTracker) ms.run(cs.getCommand(SkeletonCellLifeTracker.class), true).get();
+            break;
+          default:
+            uiService.showDialog("No such life tracker");
+            return;
+        }
+        cellLifeTracker.init(this.cells);
+        cellLifeTracker.output().get();
+        this.onLifeTrackingEnd();
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+    });
+    t.start();
+  }
+
+  protected void onDetectionEnd() {
+    if (this.state != PluginState.Detection)
+      return;
+    this.state = PluginState.LifeTracking;
+    this.displayCells();
+  }
+
+  protected void onLifeTrackingEnd() {
+    if (this.state != PluginState.LifeTracking)
+      return;
+    this.state = PluginState.Idle;
     this.displayCells();
   }
 
   private void displayCells() {
+    if (this.cells == null)
+      return;
+    // this.imp.show();
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
-    cells.forEach(cell -> roiManager.addRoi(cell.toRoi(this.imp.getFrame())));
+    cells.stream().map(cell -> cell.toRoi(this.imp.getFrame())).filter(roi -> roi != null)
+        .forEach(roi -> roiManager.addRoi(roi));
     roiManager.runCommand("show all with labels");
+  }
+
+  @Override
+  public void imageOpened(ImagePlus imp) {
+    // Ignore
+  }
+
+  @Override
+  public void imageClosed(ImagePlus imp) {
+    // Ignore
+  }
+
+  @Override
+  public void imageUpdated(ImagePlus image) {
+    if (image == this.imp) {
+      this.preview();
+    }
+  }
+
+  public enum PluginState {
+    Detection, LifeTracking, Idle
   }
 }
