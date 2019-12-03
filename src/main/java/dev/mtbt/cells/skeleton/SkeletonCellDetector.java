@@ -75,8 +75,8 @@ public class SkeletonCellDetector extends SkeletonPlugin implements Initializabl
       this.uiService.showDialog("There are no points selected.");
       return;
     }
-    List<Spine> spines = this.performSearch(this.collectSelectedPoints());
 
+    List<Spine> spines = this.performSearch(this.collectSelectedPoints());
     spines.forEach((spine) -> cells.add(new Cell(this.frameInput, new SpineCellFrame(spine))));
 
     RoiManager roiManager = ImageJUtils.getRoiManager();

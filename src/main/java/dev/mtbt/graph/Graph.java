@@ -90,4 +90,9 @@ public class Graph {
     vertices.stream().map(vertexMap::get).forEach(clone::addVertex);
     return clone;
   }
+
+  protected void assign(Graph g) {
+    this.edges = g.edges;
+    this.vertices = g.vertices;
+  }
 }

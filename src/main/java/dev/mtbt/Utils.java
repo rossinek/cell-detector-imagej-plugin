@@ -1,8 +1,9 @@
 package dev.mtbt;
 
 import dev.mtbt.graph.*;
-
+import dev.mtbt.util.Pair;
 import java.util.*;
+import java.awt.geom.Point2D;
 
 public class Utils {
   public static double distance(Point p0, Point p1) {
@@ -75,5 +76,17 @@ public class Utils {
     ArrayList<Point> result = simplifyPolyLineOneWay(polyLine, tolerance);
     Collections.reverse(result);
     return simplifyPolyLineOneWay(result, tolerance);
+  }
+
+  public static double polylineLength(List<Point2D> polyline) {
+    return polyline.stream().skip(1)
+        .reduce(new Pair<Point2D, Double>(polyline.get(0), 0.0),
+            (acc, point) -> new Pair<>(point, acc.getValue() + acc.getKey().distance(point)),
+            (v0, v1) -> new Pair<>(v1.getKey(), v0.getValue() + v1.getValue()))
+        .getValue();
+  }
+
+  public static java.awt.Point toAwtPoint(java.awt.geom.Point2D point2d) {
+    return new java.awt.Point((int) Math.round(point2d.getX()), (int) Math.round(point2d.getY()));
   }
 }

@@ -46,6 +46,8 @@ public abstract class SkeletonPlugin extends InteractiveCommand implements Initi
   protected double thresholdInput;
 
   protected ImagePlus impIndexMap = null;
+  protected Skeleton skeleton = null;
+
 
   @Override
   public void initialize() {
@@ -86,6 +88,7 @@ public abstract class SkeletonPlugin extends InteractiveCommand implements Initi
   }
 
   private void computeShapeIndexMap() {
+    this.skeleton = null;
     ImagePlus frame = HyperstackHelper.extractFrame(imp, channelInput, imp.getSlice(), frameInput);
     ImagePlus indexMap = ShapeIndexMap.getShapeIndexMap(frame, blurRadiusInput);
     if (impIndexMap == null) {
@@ -109,13 +112,17 @@ public abstract class SkeletonPlugin extends InteractiveCommand implements Initi
       return new ArrayList<Spine>();
     }
 
-    Skeleton skeleton = new Skeleton(this.impIndexMap);
+    if (this.skeleton == null) {
+      this.skeleton = new Skeleton(this.impIndexMap);
+    }
 
     ArrayList<Pair<Point, Spine>> spines = new ArrayList<>();
-    points.forEach((point) -> spines.add(new Pair<Point, Spine>(point, skeleton.findSpine(point))));
+    points.forEach(
+        (point) -> spines.add(new Pair<Point, Spine>(point, this.skeleton.findSpine(point))));
 
-    return this.fixConflicts(spines).stream().map(pair -> pair.getValue())
+    List<Spine> l = this.fixConflicts(spines).stream().map(pair -> pair.getValue())
         .collect(Collectors.toCollection(ArrayList::new));
+    return l;
   }
 
   protected List<Pair<Point, Spine>> fixConflicts(List<Pair<Point, Spine>> spines) {
@@ -131,8 +138,8 @@ public abstract class SkeletonPlugin extends InteractiveCommand implements Initi
             Point p2 = spines.get(i).getKey();
             Spine[] newSpines = spine.getValue().split(new dev.mtbt.graph.Point(p1),
                 new dev.mtbt.graph.Point(p2), p -> this.impIndexMap.getProcessor().getf(p.x, p.y));
-            iterator.set(new Pair<>(p1, newSpines[0]));
-            spines.set(i, new Pair<>(p2, newSpines[1]));
+            spine.getValue().assign(newSpines[0]);
+            spines.get(i).getValue().assign(newSpines[1]);
             change = true;
             break;
           }

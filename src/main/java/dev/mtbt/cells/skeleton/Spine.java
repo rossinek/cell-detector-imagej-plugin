@@ -68,11 +68,9 @@ public class Spine extends Graph {
   }
 
   /**
-   * Split Spine in the weakest point between points
-   *
-   * @return array containing two spines: first containing p1, second containing p2
+   * Get the weakest point on spine between two points according to given score function
    */
-  public Spine[] split(Point p1, Point p2, PointEvaluator pointEvaluator) {
+  public Point weakestPoint(Point p1, Point p2, PointEvaluator pointEvaluator) {
     Edge e1 = this.closestEdge(p1);
     Edge e2 = this.closestEdge(p2);
     ArrayList<Point> points = findPath(e1, e2).toSlabs(false);
@@ -94,7 +92,7 @@ public class Spine extends Graph {
     }
     int bi = Math.min(index1, index2);
     int ei = Math.max(index1, index2);
-    Point weakestPoint = null;
+    Point weakestPoint = points.get(bi);
     double minScore = Double.POSITIVE_INFINITY;
     for (int i = bi + 1; i < ei; i++) {
       double score = pointEvaluator.score(points.get(i));
@@ -103,9 +101,20 @@ public class Spine extends Graph {
         weakestPoint = points.get(i);
       }
     }
-    Spine[] spines = split(weakestPoint);
-    if (index1 > index2)
+
+    return weakestPoint;
+  }
+
+  /**
+   * Split Spine in the weakest point between points
+   *
+   * @return array containing two spines: first containing p1, second containing p2
+   */
+  public Spine[] split(Point p1, Point p2, PointEvaluator pointEvaluator) {
+    Spine[] spines = this.split(this.weakestPoint(p1, p2, pointEvaluator));
+    if (spines[0].distance(p1) > spines[0].distance(p2)) {
       Collections.reverse(Arrays.asList(spines));
+    }
     return spines;
   }
 
@@ -113,7 +122,7 @@ public class Spine extends Graph {
     Edge edge = findEdge(slab);
     Edge[] newEdges = this.splitEdge(edge, slab);
     Spine[] spines = new Spine[2];
-    for (int i = 0; i < newEdges.length; i++) {
+    for (int i = 0; i < 2; i++) {
       Edge newBranch = newEdges[i];
       Spine spine = new Spine();
       spines[i] = spine;
@@ -276,6 +285,12 @@ public class Spine extends Graph {
     if (this.e2 == null)
       return null;
     return this.e2.getSkeletonVertex().center().toPoint2D();
+  }
+
+  public void assign(Spine s) {
+    super.assign(s);
+    this.e1 = s.e1;
+    this.e2 = s.e2;
   }
 
   class Path {
