@@ -76,8 +76,11 @@ public class SkeletonCellDetector extends SkeletonPlugin implements Initializabl
       return;
     }
 
-    List<Spine> spines = this.performSearch(this.collectSelectedPoints());
-    spines.forEach((spine) -> cells.add(new Cell(this.frameInput, new SpineCellFrame(spine))));
+    List<Spine> spines = this.performSearch(this.collectSelectedPoints(), null);
+    for (int index = 0; index < spines.size(); index++) {
+      char character = (char) ('A' + index);
+      cells.add(new Cell(this.frameInput, new SpineCellFrame(spines.get(index)), "" + character));
+    }
 
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();

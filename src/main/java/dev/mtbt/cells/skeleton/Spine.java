@@ -26,8 +26,10 @@ public class Spine extends Graph {
     return points.stream().map(p -> p.toPoint2D()).collect(Collectors.toCollection(ArrayList::new));
   }
 
-  private Path toPath() {
-    return new Path(this.e1, this.e2, this.e1.getBranches().first(), this.e2.getBranches().first());
+  public void reverse() {
+    SpineVertex temp = this.e1;
+    this.e1 = this.e2;
+    this.e2 = temp;
   }
 
   public void traverse(GraphTraverser t) {
@@ -236,6 +238,10 @@ public class Spine extends Graph {
       }
     }
     return null;
+  }
+
+  private Path toPath() {
+    return new Path(this.e1, this.e2, this.e1.getBranches().first(), this.e2.getBranches().first());
   }
 
   private Path findPath(Edge e1, Edge e2) {

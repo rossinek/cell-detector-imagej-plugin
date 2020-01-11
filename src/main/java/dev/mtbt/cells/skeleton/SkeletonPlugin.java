@@ -107,22 +107,29 @@ public abstract class SkeletonPlugin extends InteractiveCommand implements Initi
     }
   }
 
-  protected List<Spine> performSearch(List<Point> points) {
+  protected Spine performSearch(Point point) {
+    return this.performSearch(point, null);
+  }
+
+  protected Spine performSearch(Point point, Spine previous) {
+    if (this.skeleton == null) {
+      this.skeleton = new Skeleton(this.impIndexMap);
+    }
+    Spine spine = this.skeleton.findSpine(point, previous);
+    return spine;
+  }
+
+  protected List<Spine> performSearch(List<Point> points, Spine previous) {
     if (points.isEmpty()) {
       return new ArrayList<Spine>();
     }
 
-    if (this.skeleton == null) {
-      this.skeleton = new Skeleton(this.impIndexMap);
-    }
+    ArrayList<Pair<Point, Spine>> spines =
+        points.stream().map(point -> new Pair<>(point, this.performSearch(point, previous)))
+            .collect(Collectors.toCollection(ArrayList::new));
 
-    ArrayList<Pair<Point, Spine>> spines = new ArrayList<>();
-    points.forEach(
-        (point) -> spines.add(new Pair<Point, Spine>(point, this.skeleton.findSpine(point))));
-
-    List<Spine> l = this.fixConflicts(spines).stream().map(pair -> pair.getValue())
+    return this.fixConflicts(spines).stream().map(pair -> pair.getValue())
         .collect(Collectors.toCollection(ArrayList::new));
-    return l;
   }
 
   protected List<Pair<Point, Spine>> fixConflicts(List<Pair<Point, Spine>> spines) {

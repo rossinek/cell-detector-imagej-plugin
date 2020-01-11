@@ -144,9 +144,13 @@ public class CellsPlugin extends InteractiveCommand implements Initializable, Im
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
     int frame = this.imp.getFrame();
-    Cell.evoluate(this.cells, frame).stream().map(cell -> cell.toRoi(frame))
-        .filter(roi -> roi != null).forEach(roi -> roiManager.addRoi(roi));
+    List<Cell> currentCells = Cell.evoluate(this.cells, frame);
+    currentCells.stream().forEach(cell -> roiManager.addRoi(cell.toRoi(frame)));
+    currentCells.stream()
+        .forEach(cell -> cell.endsToRois(frame).forEach(roi -> roiManager.addRoi(roi)));
+
     roiManager.runCommand("show all with labels");
+    roiManager.runCommand("usenames", "true");
   }
 
   @Override

@@ -10,10 +10,6 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-// import static org.hamcrest.CoreMatchers.equalTo;
-// import static org.hamcrest.CoreMatchers.is;
-// import static org.hamcrest.MatcherAssert.assertThat;
-
 public class CellFrameTest {
   public static Point2D begin;
   public static Point2D end;

@@ -3,6 +3,7 @@ package dev.mtbt.cells.skeleton;
 import dev.mtbt.Utils;
 import dev.mtbt.graph.Graph;
 import dev.mtbt.graph.Edge;
+import dev.mtbt.graph.EdgeEvaluator;
 import dev.mtbt.graph.Point;
 import dev.mtbt.graph.Vertex;
 import ij.ImagePlus;
@@ -23,6 +24,20 @@ public class Skeleton extends Graph {
   protected FloatProcessor initialFp;
   protected AnalyzeSkeleton_ analyzeSkeleton;
   protected SkeletonResult skeletonResult;
+
+  private final double EDGE_EVALUATOR_RADIUS = 10;
+
+  private EdgeEvaluator weakestSlabEvaluator = (edge, start) -> {
+    double lowestValue = Double.POSITIVE_INFINITY;
+    for (Point slab : edge.getSlabs()) {
+      double dist = Utils.distance(slab, start.getPoints());
+      if (dist <= EDGE_EVALUATOR_RADIUS) {
+        lowestValue = Math.min(initialFp.getf(slab.x, slab.y), lowestValue);
+      }
+    }
+    double scale = 1 / (initialFp.getMax() - initialFp.getMin());
+    return (lowestValue - initialFp.getMin()) * scale;
+  };
 
   public Skeleton(ImagePlus imp) {
     super();
@@ -61,19 +76,43 @@ public class Skeleton extends Graph {
     Spine spine = new Spine();
     if (initialEdge != null) {
       spine.addEdge(initialEdge);
-      spine.extend((edge, start) -> {
-        final double RADIUS = 10;
-        double lowestValue = Double.POSITIVE_INFINITY;
-        for (Point slab : edge.getSlabs()) {
-          double dist = Utils.distance(slab, start.getPoints());
-          if (dist > RADIUS)
-            continue;
-          lowestValue = Math.min(initialFp.getf(slab.x, slab.y), lowestValue);
-        }
-        return lowestValue;
-      });
+      spine.extend(this.weakestSlabEvaluator);
     }
     return spine;
+  }
+
+  /**
+   * Find finite poly line containing point close to reference spine
+   *
+   * @param initialPoint should lay on skeleton
+   * @param reference    reference spine
+   * @return poly line containing point close to reference spine
+   */
+  public Spine findSpine(java.awt.Point initialPoint, Spine reference) {
+    // if (reference == null) {
+    return this.findSpine(initialPoint);
+    // }
+    // Edge initialEdge = this.closestEdge(new Point(initialPoint));
+    // Spine spine = new Spine();
+    // if (initialEdge != null) {
+    // spine.addEdge(initialEdge);
+    // spine.extend((edge, start) -> {
+    // double scalledLowestValue = this.weakestSlabEvaluator.score(edge, start);
+    // double distance = 0;
+    // int counter = 0;
+    // for (Point slab : edge.getSlabs()) {
+    // double dist = Utils.distance(slab, start.getPoints());
+    // if (dist <= EDGE_EVALUATOR_RADIUS) {
+    // distance += reference.distance(new Point(slab.x, slab.y));
+    // counter++;
+    // }
+    // }
+    // double scalledEdgeDistance =
+    // counter > 0 ? distance / (counter * EDGE_EVALUATOR_RADIUS) : Double.POSITIVE_INFINITY;
+    // return scalledLowestValue - scalledEdgeDistance;
+    // });
+    // }
+    // return spine;
   }
 
   public ImagePlus toImagePlus() {
