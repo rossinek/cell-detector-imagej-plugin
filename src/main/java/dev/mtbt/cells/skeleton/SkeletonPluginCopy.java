@@ -13,17 +13,16 @@ import java.util.stream.Collectors;
 import javax.swing.JDialog;
 
 import org.scijava.Initializable;
-import org.scijava.command.Command;
+import org.scijava.command.InteractiveCommand;
 import org.scijava.module.MutableModuleItem;
 import org.scijava.plugin.Parameter;
 import org.scijava.ui.UIService;
 import org.scijava.widget.NumberWidget;
 import dev.mtbt.HyperstackHelper;
 import dev.mtbt.ShapeIndexMap;
-import dev.mtbt.gui.RunnableSlider;
 import dev.mtbt.util.Pair;
 
-public abstract class SkeletonPlugin implements Command {
+public abstract class SkeletonPluginCopy extends InteractiveCommand implements Initializable {
 
   @Parameter
   protected ImagePlus imp;
@@ -31,36 +30,48 @@ public abstract class SkeletonPlugin implements Command {
   @Parameter
   protected UIService uiService;
 
-  // @Parameter(persist = false, label = "Shape index map gaussian blur radius",
-  // style = NumberWidget.SCROLL_BAR_STYLE, min = "0", max = "10", stepSize = "0.1")
-  // protected double blurRadiusInput;
+  @Parameter(persist = true, persistKey = "skltn-channel", label = "Channel",
+      style = NumberWidget.SCROLL_BAR_STYLE, min = "1")
+  protected int channelInput;
 
-  // @Parameter(persist = false, label = "Shape index map threshold",
-  // style = NumberWidget.SCROLL_BAR_STYLE, min = "-1", max = "1", stepSize = "0.1")
-  // protected double thresholdInput;
+  @Parameter(persist = false, label = "Frame", style = NumberWidget.SCROLL_BAR_STYLE, min = "1")
+  protected int frameInput;
+
+  @Parameter(persist = false, label = "Shape index map gaussian blur radius",
+      style = NumberWidget.SCROLL_BAR_STYLE, min = "0", max = "10", stepSize = "0.1")
+  protected double blurRadiusInput;
+
+  @Parameter(persist = false, label = "Shape index map threshold",
+      style = NumberWidget.SCROLL_BAR_STYLE, min = "-1", max = "1", stepSize = "0.1")
+  protected double thresholdInput;
 
   protected ImagePlus impIndexMap = null;
   protected Skeleton skeleton = null;
 
-  private RunnableSlider channelSlider;
-  private RunnableSlider frameSlider;
-  private RunnableSlider blurRadiusSlider;
-  private RunnableSlider thresholdSlider;
+
+  @Override
+  public void initialize() {
+    if (this.imp == null)
+      return;
+    final MutableModuleItem<Integer> frameInputItem =
+        getInfo().getMutableInput("frameInput", Integer.class);
+    frameInputItem.setMaximumValue(imp.getNFrames());
+    final MutableModuleItem<Integer> channelInputItem =
+        getInfo().getMutableInput("channelInput", Integer.class);
+    getInfo().inputs().forEach(i -> {
+      if (i.getName() == "doneButton") {
+        // no idea how to disable it :(
+      }
+    });
+    channelInputItem.setMaximumValue(imp.getNChannels());
+    this.channelInput = Math.max(1, Math.min(this.channelInput, imp.getNChannels()));
+    this.frameInput = imp.getFrame();
+    this.blurRadiusInput = 4.0;
+    this.thresholdInput = 0.0;
+  }
 
   @Override
   public void run() {
-    if (this.imp == null) {
-      return;
-    }
-
-    int channel = Math.max(1, Math.min(this.channelInput, imp.getNChannels()));
-    this.channelSlider = new RunnableSlider(1, imp.getNChannels(), channel, this::preview);
-    this.channelSlider = new RunnableSlider(1, imp.getNFrames(), imp.getFrame(), this::preview);
-    this.blurRadiusSlider = new RunnableSlider(0.0, 10.0, 4.0, this::preview);
-    this.thresholdSlider = new RunnableSlider(-1.0, 1.0, 0.0, this::preview);
-  }
-
-  public void preview() {
     computeShapeIndexMap();
     thresholdShapeIndexMap();
     impIndexMap.show();

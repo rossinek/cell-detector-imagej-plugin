@@ -26,7 +26,7 @@ import org.scijava.plugin.Plugin;
 import org.scijava.widget.Button;
 
 @Plugin(type = Command.class, menuPath = "Developement>Skeleton>Cell Life Tracker")
-public class SkeletonCellLifeTracker extends SkeletonPlugin
+public class SkeletonCellLifeTracker extends SkeletonPluginCopy
     implements Initializable, CellLifeTracker {
 
   @Parameter(label = "Run", callback = "onRunClick")

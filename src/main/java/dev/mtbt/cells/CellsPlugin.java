@@ -3,78 +3,112 @@ package dev.mtbt.cells;
 import ij.ImageListener;
 import ij.ImagePlus;
 import ij.plugin.frame.RoiManager;
-
+import java.awt.Component;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.List;
-import org.scijava.Initializable;
+import javax.swing.BoxLayout;
+import javax.swing.JComboBox;
+import javax.swing.JPanel;
+import org.scijava.Context;
 import org.scijava.command.Command;
 import org.scijava.command.CommandService;
-import org.scijava.command.InteractiveCommand;
 import org.scijava.module.ModuleService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.UIService;
-import org.scijava.widget.Button;
 
 import dev.mtbt.ImageJUtils;
 import dev.mtbt.cells.skeleton.SkeletonCellDetector;
 import dev.mtbt.cells.skeleton.SkeletonCellLifeTracker;
+import dev.mtbt.gui.DialogStepper;
+import dev.mtbt.gui.DialogStepperStep;
+import dev.mtbt.gui.RunnableButton;
 
-@Plugin(type = Command.class, menuPath = "Developement>Main Plugin")
-public class CellsPlugin extends InteractiveCommand implements Initializable, ImageListener {
+@Plugin(type = Command.class, menuPath = "Developement>Other way")
+public class CellsPlugin implements Command, ImageListener, ActionListener {
   @Parameter
   private ImagePlus imp;
-
   @Parameter
   private UIService uiService;
+  @Parameter
+  private Context context;
 
-  @Parameter(label = "Select detector", choices = {"SkeletonCellDetector"})
-  private String detector = null;
-
-  @Parameter(label = "Run detector", callback = "runDetector")
-  private Button runDetectorButton;
-
-  @Parameter(label = "Select life tracker", choices = {"SkeletonCellLifeTracker"})
-  private String lifeTracker = null;
-
-  @Parameter(label = "Run life tracker", callback = "runLifeTracker")
-  private Button runLifeTrackerButton;
-
-  private PluginState state = PluginState.Detection;
-
+  private DialogStepper dialog;
   private List<Cell> cells;
-
-  @Override
-  public void initialize() {
-    ImagePlus.addImageListener(this);
-    if (imp == null)
-      return;
-  }
+  JComboBox<String> detectorSelect;
+  final String[] detectorOptions = {"SkeletonCellDetector"};
+  private String detector = detectorOptions[0];
+  JComboBox<String> lifeTrackerSelect;
+  final String[] lifeTrackerOptions = {"SkeletonCellLifeTracker"};
+  private String lifeTracker = lifeTrackerOptions[0];
 
   @Override
   public void run() {
+    System.out.println("CELLS: " + (this.cells == null ? "NULL" : this.cells.size()));
+    ImagePlus.addImageListener(this);
+    if (imp == null)
+      return;
+
+    JPanel cardDetection = new JPanel();
+    cardDetection.setLayout(new BoxLayout(cardDetection, BoxLayout.Y_AXIS));
+    detectorSelect = new JComboBox<>(detectorOptions);
+    detectorSelect.setAlignmentX(Component.CENTER_ALIGNMENT);
+    detectorSelect.addActionListener(this);
+    cardDetection.add(detectorSelect);
+    RunnableButton detectorButton = new RunnableButton("Run detector", this::runDetector);
+    detectorButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+    cardDetection.add(detectorButton);
+
+    JPanel cardLifeTracking = new JPanel();
+    cardLifeTracking.setLayout(new BoxLayout(cardLifeTracking, BoxLayout.Y_AXIS));
+    lifeTrackerSelect = new JComboBox<>(lifeTrackerOptions);
+    lifeTrackerSelect.setAlignmentX(Component.CENTER_ALIGNMENT);
+    lifeTrackerSelect.addActionListener(this);
+    cardLifeTracking.add(lifeTrackerSelect);
+    RunnableButton lifeTrackerButton = new RunnableButton("Run life tracker", this::runLifeTracker);
+    lifeTrackerButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+    cardLifeTracking.add(lifeTrackerButton);
+
+    this.dialog = new DialogStepper("Custom GUI test title", this::cleanup);
+    this.dialog.registerStep(new DialogStepperStep(dialog, "Detection", cardDetection));
+    this.dialog.registerStep(new DialogStepperStep(dialog, "LifeTracking", cardLifeTracking));
+    this.dialog.setVisible(true);
   }
 
   @Override
-  public void preview() {
-    switch (this.state) {
-      case Detection:
-        break;
-      case LifeTracking:
-      case Idle:
-        this.displayCells();
-        break;
+  public void actionPerformed(ActionEvent e) {
+    Object source = e.getSource();
+    if (source == this.detectorSelect) {
+      this.detector = (String) this.detectorSelect.getSelectedItem();
+    } else if (source == this.lifeTrackerSelect) {
+      this.lifeTracker = (String) this.lifeTrackerSelect.getSelectedItem();
     }
   }
 
+  public void preview() {
+    this.displayCells();
+  }
+
+  private void cleanup() {
+    ImagePlus.removeImageListener(this);
+    if (this.cells == null)
+      return;
+    this.cells = null;
+    RoiManager roiManager = ImageJUtils.getRoiManager();
+    roiManager.reset();
+  }
+
   protected void runDetector() {
+    System.out.println("Detector: " + detector == null ? "null" : detector);
     if (detector == null) {
       uiService.showDialog("Select detector first");
       return;
     }
     Thread t = new Thread(() -> {
       try {
-        final ModuleService ms = this.getContext().service(ModuleService.class);
-        final CommandService cs = this.getContext().service(CommandService.class);
+        final ModuleService ms = this.context.service(ModuleService.class);
+        final CommandService cs = this.context.service(CommandService.class);
         CellDetector cellDetector;
         switch (detector) {
           case "SkeletonCellDetector":
@@ -101,8 +135,8 @@ public class CellsPlugin extends InteractiveCommand implements Initializable, Im
     }
     Thread t = new Thread(() -> {
       try {
-        final ModuleService ms = this.getContext().service(ModuleService.class);
-        final CommandService cs = this.getContext().service(CommandService.class);
+        final ModuleService ms = this.context.service(ModuleService.class);
+        final CommandService cs = this.context.service(CommandService.class);
         CellLifeTracker cellLifeTracker;
         switch (lifeTracker) {
           case "SkeletonCellLifeTracker":
@@ -124,17 +158,13 @@ public class CellsPlugin extends InteractiveCommand implements Initializable, Im
   }
 
   protected void onDetectionEnd() {
-    if (this.state != PluginState.Detection)
-      return;
-    this.state = PluginState.LifeTracking;
-    this.displayCells();
+    this.preview();
+    this.dialog.getCurrentStep().setFinished(true);
   }
 
   protected void onLifeTrackingEnd() {
-    if (this.state != PluginState.LifeTracking)
-      return;
-    this.state = PluginState.Idle;
-    this.displayCells();
+    this.preview();
+    this.dialog.getCurrentStep().setFinished(true);
   }
 
   private void displayCells() {
@@ -168,9 +198,5 @@ public class CellsPlugin extends InteractiveCommand implements Initializable, Im
     if (image == this.imp) {
       this.preview();
     }
-  }
-
-  public enum PluginState {
-    Detection, LifeTracking, Idle
   }
 }

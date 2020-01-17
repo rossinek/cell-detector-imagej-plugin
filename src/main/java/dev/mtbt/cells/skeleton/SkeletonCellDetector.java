@@ -22,7 +22,8 @@ import org.scijava.plugin.Plugin;
 import org.scijava.widget.Button;
 
 @Plugin(type = Command.class, menuPath = "Developement>Skeleton>Cell Detector")
-public class SkeletonCellDetector extends SkeletonPlugin implements Initializable, CellDetector {
+public class SkeletonCellDetector extends SkeletonPluginCopy
+    implements Initializable, CellDetector {
 
   @Parameter(label = "Select cells", callback = "onSelectCellsClick")
   private Button selectCellsButton;
