@@ -1,28 +1,31 @@
 package dev.mtbt.cells.skeleton;
 
 import ij.ImagePlus;
+import ij.plugin.frame.RoiManager;
 import ij.process.FloatProcessor;
 
 import java.awt.Point;
-import java.awt.Window;
+import java.awt.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.stream.Collectors;
-
-import javax.swing.JDialog;
-
-import org.scijava.Initializable;
-import org.scijava.command.InteractiveCommand;
-import org.scijava.module.MutableModuleItem;
+import javax.swing.BoxLayout;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import org.scijava.command.DynamicCommand;
 import org.scijava.plugin.Parameter;
 import org.scijava.ui.UIService;
-import org.scijava.widget.NumberWidget;
 import dev.mtbt.HyperstackHelper;
+import dev.mtbt.ImageJUtils;
 import dev.mtbt.ShapeIndexMap;
+import dev.mtbt.gui.DialogWindow;
+import dev.mtbt.gui.RunnableSlider;
+import dev.mtbt.gui.RunnableSliderDouble;
 import dev.mtbt.util.Pair;
 
-public abstract class SkeletonPlugin extends InteractiveCommand implements Initializable {
+public abstract class SkeletonPlugin extends DynamicCommand {
 
   @Parameter
   protected ImagePlus imp;
@@ -30,67 +33,82 @@ public abstract class SkeletonPlugin extends InteractiveCommand implements Initi
   @Parameter
   protected UIService uiService;
 
-  @Parameter(persist = true, persistKey = "skltn-channel", label = "Channel",
-      style = NumberWidget.SCROLL_BAR_STYLE, min = "1")
-  protected int channelInput;
-
-  @Parameter(persist = false, label = "Frame", style = NumberWidget.SCROLL_BAR_STYLE, min = "1")
-  protected int frameInput;
-
-  @Parameter(persist = false, label = "Shape index map gaussian blur radius",
-      style = NumberWidget.SCROLL_BAR_STYLE, min = "0", max = "10", stepSize = "0.1")
-  protected double blurRadiusInput;
-
-  @Parameter(persist = false, label = "Shape index map threshold",
-      style = NumberWidget.SCROLL_BAR_STYLE, min = "-1", max = "1", stepSize = "0.1")
-  protected double thresholdInput;
-
   protected ImagePlus impIndexMap = null;
   protected Skeleton skeleton = null;
 
+  protected DialogWindow dialog;
+  protected JPanel dialogContent;
+  protected RunnableSlider channelSlider;
+  protected RunnableSlider frameSlider;
+  protected RunnableSliderDouble blurRadiusSlider;
+  protected RunnableSliderDouble thresholdSlider;
 
-  @Override
-  public void initialize() {
-    if (this.imp == null)
-      return;
-    final MutableModuleItem<Integer> frameInputItem =
-        getInfo().getMutableInput("frameInput", Integer.class);
-    frameInputItem.setMaximumValue(imp.getNFrames());
-    final MutableModuleItem<Integer> channelInputItem =
-        getInfo().getMutableInput("channelInput", Integer.class);
-    channelInputItem.setMaximumValue(imp.getNChannels());
-    this.channelInput = Math.max(1, Math.min(this.channelInput, imp.getNChannels()));
-    this.frameInput = imp.getFrame();
-    this.blurRadiusInput = 4.0;
-    this.thresholdInput = 0.0;
-  }
+  boolean initialized = false;
 
   @Override
   public void run() {
-    computeShapeIndexMap();
-    thresholdShapeIndexMap();
-    impIndexMap.show();
+    this.initComponents();
+    this.preview();
   }
 
-  protected void close() {
-    impIndexMap.close();
-    Window[] windows = Window.getWindows();
-    for (Window window : windows) {
-      if (JDialog.class.isInstance(window)) {
-        JDialog dialog = (JDialog) window;
-        if (dialog.getTitle().contains(this.getInfo().getTitle())) {
-          dialog.dispose();
-          return;
-        }
-      }
+  protected boolean initComponents() {
+    if (this.initialized || this.imp == null) {
+      return false;
     }
-    uiService.showDialog("Please close plugin window manually");
+
+    this.dialogContent = new JPanel();
+    dialogContent.setLayout(new BoxLayout(dialogContent, BoxLayout.Y_AXIS));
+
+    int channel = Math.min(1, imp.getNChannels());
+    this.channelSlider = new RunnableSlider(1, imp.getNChannels(), channel, this::preview);
+    addDialogComponent(new JLabel("Channel"));
+    addDialogComponent(channelSlider);
+    this.frameSlider = new RunnableSlider(1, imp.getNFrames(), imp.getFrame(), this::preview);
+    addDialogComponent(new JLabel("Frame"));
+    addDialogComponent(frameSlider);
+    this.blurRadiusSlider = new RunnableSliderDouble(0.0, 10.0, 0.2, 4.0, this::preview);
+    addDialogComponent(new JLabel("Blur"));
+    addDialogComponent(blurRadiusSlider);
+    this.thresholdSlider = new RunnableSliderDouble(-1.0, 1.0, 0.1, 0.0, this::preview);
+    addDialogComponent(new JLabel("Threshold"));
+    addDialogComponent(thresholdSlider);
+
+    this.dialog = new DialogWindow("Skeleton plugin", this::done, this::cleanup);
+    this.dialog.setContent(dialogContent);
+    this.dialog.setVisible(true);
+
+    initialized = true;
+    return true;
+  }
+
+  protected void addDialogComponent(JComponent component) {
+    component.setAlignmentX(Component.CENTER_ALIGNMENT);
+    dialogContent.add(component);
+  }
+
+  public void preview() {
+    if (this.initialized) {
+      computeShapeIndexMap();
+      thresholdShapeIndexMap();
+      impIndexMap.show();
+    }
+  }
+
+  protected void done() {
+    cleanup();
+    this.dialog.setVisible(false);
+  }
+
+  protected void cleanup() {
+    impIndexMap.close();
+    this.dialog.setVisible(false);
   }
 
   private void computeShapeIndexMap() {
     this.skeleton = null;
-    ImagePlus frame = HyperstackHelper.extractFrame(imp, channelInput, imp.getSlice(), frameInput);
-    ImagePlus indexMap = ShapeIndexMap.getShapeIndexMap(frame, blurRadiusInput);
+    ImagePlus frame = HyperstackHelper.extractFrame(imp, channelSlider.getValue(), imp.getSlice(),
+        frameSlider.getValue());
+    ImagePlus indexMap = ShapeIndexMap.getShapeIndexMap(frame, blurRadiusSlider.getDoubleValue());
     if (impIndexMap == null) {
       impIndexMap = indexMap;
     } else {
@@ -103,7 +121,7 @@ public abstract class SkeletonPlugin extends InteractiveCommand implements Initi
     int length = impIndexMap.getProcessor().getPixelCount();
     for (int i = 0; i < length; i++) {
       float val = fp.getf(i);
-      fp.setf(i, val > thresholdInput ? val : Float.NEGATIVE_INFINITY);
+      fp.setf(i, val > thresholdSlider.getDoubleValue() ? val : Float.NEGATIVE_INFINITY);
     }
   }
 
@@ -113,7 +131,7 @@ public abstract class SkeletonPlugin extends InteractiveCommand implements Initi
 
   protected Spine performSearch(Point point, Spine previous) {
     if (this.skeleton == null) {
-      this.skeleton = new Skeleton(this.impIndexMap);
+      this.skeleton = new Skeleton(this.impIndexMap.duplicate());
     }
     Spine spine = this.skeleton.findSpine(point, previous);
     return spine;

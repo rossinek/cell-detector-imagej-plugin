@@ -4,6 +4,7 @@ import dev.mtbt.ImageJUtils;
 import dev.mtbt.cells.Cell;
 import dev.mtbt.cells.CellDetector;
 import dev.mtbt.cells.skeleton.Spine;
+import dev.mtbt.gui.RunnableButton;
 import ij.gui.PolygonRoi;
 import ij.gui.Toolbar;
 import ij.plugin.frame.RoiManager;
@@ -13,36 +14,45 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
-
-import org.scijava.Initializable;
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
-import org.scijava.widget.Button;
 
 @Plugin(type = Command.class, menuPath = "Developement>Skeleton>Cell Detector")
-public class SkeletonCellDetector extends SkeletonPlugin implements Initializable, CellDetector {
+public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector {
 
-  @Parameter(label = "Select cells", callback = "onSelectCellsClick")
-  private Button selectCellsButton;
-
-  @Parameter(label = "Clear points", callback = "onClearPointsClick")
-  private Button clearPointsButton;
-
-  @Parameter(label = "Clear selected cells", callback = "onClearSelectedCellsClick")
-  private Button clearSelectedCellsButton;
-
-  @Parameter(label = "Run", callback = "onRunClick")
-  private Button runButton;
-
-  @Parameter(label = "Done", callback = "onDoneClick")
-  protected Button doneButton;
+  private RunnableButton selectCellsButton;
+  private RunnableButton clearPointsButton;
+  private RunnableButton clearSelectedCellsButton;
+  private RunnableButton runButton;
 
   @Parameter(type = ItemIO.OUTPUT)
   private List<Cell> cells = new ArrayList<>();
 
   CompletableFuture<List<Cell>> result = new CompletableFuture<>();
+
+  @Override
+  public void run() {
+    if (!super.initComponents()) {
+      return;
+    }
+    this.selectCellsButton = new RunnableButton("Select cells", this::onSelectCellsClick);
+    addDialogComponent(selectCellsButton);
+
+    this.clearPointsButton = new RunnableButton("Clear points", this::onClearPointsClick);
+    addDialogComponent(clearPointsButton);
+
+    this.clearSelectedCellsButton =
+        new RunnableButton("Clear selected cells", this::onClearSelectedCellsClick);
+    addDialogComponent(clearSelectedCellsButton);
+
+    this.runButton = new RunnableButton("Run!", this::onRunClick);
+    addDialogComponent(runButton);
+
+    this.dialog.pack();
+    this.preview();
+  }
 
   @Override
   public Future<List<Cell>> output() {
@@ -79,30 +89,25 @@ public class SkeletonCellDetector extends SkeletonPlugin implements Initializabl
     List<Spine> spines = this.performSearch(this.collectSelectedPoints(), null);
     for (int index = 0; index < spines.size(); index++) {
       char character = (char) ('A' + index);
-      cells.add(new Cell(this.frameInput, new SpineCellFrame(spines.get(index)), "" + character));
+      cells.add(new Cell(this.frameSlider.getValue(), new SpineCellFrame(spines.get(index)),
+          "" + character));
     }
 
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
-    cells.forEach(cell -> roiManager.addRoi(cell.toRoi(this.frameInput)));
+    cells.forEach(cell -> roiManager.addRoi(cell.toRoi(this.frameSlider.getValue())));
     roiManager.runCommand("show all");
   }
 
-  protected void onDoneClick() {
-    RoiManager roiManager = ImageJUtils.getRoiManager();
-    roiManager.reset();
-    roiManager.close();
-
+  protected void done() {
     result.complete(this.cells);
-
-    this.close();
+    super.done();
   }
 
   private List<Point> collectSelectedPoints() {
     ArrayList<Point> points = new ArrayList<>();
     PolygonRoi roi = this.impIndexMap != null ? (PolygonRoi) this.impIndexMap.getRoi() : null;
     if (roi != null) {
-      System.out.println("> collect selected points (" + roi.getFloatPolygon().npoints + ")");
       int[] xPoints = roi.getPolygon().xpoints;
       int[] yPoints = roi.getPolygon().ypoints;
       for (int i = 0; i < xPoints.length; i++) {
