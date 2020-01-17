@@ -4,7 +4,6 @@ import dev.mtbt.ImageJUtils;
 import dev.mtbt.cells.Cell;
 import dev.mtbt.cells.CellDetector;
 import dev.mtbt.cells.skeleton.Spine;
-import dev.mtbt.gui.RunnableButton;
 import ij.gui.PolygonRoi;
 import ij.gui.Toolbar;
 import ij.plugin.frame.RoiManager;
@@ -15,48 +14,36 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
+import org.scijava.Initializable;
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
+import org.scijava.widget.Button;
 
-@Plugin(type = Command.class, menuPath = "Developement>Skeleton>Cell Detector GUI")
-public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector {
+@Plugin(type = Command.class, menuPath = "Developement>Skeleton>Cell Detector")
+public class SkeletonCellDetectorCopy extends SkeletonPluginCopy
+    implements Initializable, CellDetector {
 
-  private RunnableButton selectCellsButton;
-  private RunnableButton clearPointsButton;
-  private RunnableButton clearSelectedCellsButton;
-  private RunnableButton runButton;
+  @Parameter(label = "Select cells", callback = "onSelectCellsClick")
+  private Button selectCellsButton;
+
+  @Parameter(label = "Clear points", callback = "onClearPointsClick")
+  private Button clearPointsButton;
+
+  @Parameter(label = "Clear selected cells", callback = "onClearSelectedCellsClick")
+  private Button clearSelectedCellsButton;
+
+  @Parameter(label = "Run", callback = "onRunClick")
+  private Button runButton;
+
+  @Parameter(label = "Done", callback = "onDoneClick")
+  protected Button doneButton;
 
   @Parameter(type = ItemIO.OUTPUT)
   private List<Cell> cells = new ArrayList<>();
 
   CompletableFuture<List<Cell>> result = new CompletableFuture<>();
-
-  @Override
-  public void run() {
-    super.run();
-
-    this.selectCellsButton = new RunnableButton("Select cells", this::onSelectCellsClick);
-    selectCellsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    dialogContent.add(selectCellsButton);
-
-    this.clearPointsButton = new RunnableButton("Clear points", this::onClearPointsClick);
-    clearPointsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    dialogContent.add(clearPointsButton);
-
-    this.clearSelectedCellsButton =
-        new RunnableButton("Clear selected cells", this::onClearSelectedCellsClick);
-    clearSelectedCellsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    dialogContent.add(clearSelectedCellsButton);
-
-    this.runButton = new RunnableButton("Run!", this::onRunClick);
-    runButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    dialogContent.add(runButton);
-
-    this.dialog.pack();
-  }
-
 
   @Override
   public Future<List<Cell>> output() {
@@ -93,22 +80,23 @@ public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector
     List<Spine> spines = this.performSearch(this.collectSelectedPoints(), null);
     for (int index = 0; index < spines.size(); index++) {
       char character = (char) ('A' + index);
-      cells.add(new Cell(this.frameSlider.getValue(), new SpineCellFrame(spines.get(index)),
-          "" + character));
+      cells.add(new Cell(this.frameInput, new SpineCellFrame(spines.get(index)), "" + character));
     }
 
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
-    cells.forEach(cell -> roiManager.addRoi(cell.toRoi(this.frameSlider.getValue())));
+    cells.forEach(cell -> roiManager.addRoi(cell.toRoi(this.frameInput)));
     roiManager.runCommand("show all");
   }
 
-  protected void done() {
+  protected void onDoneClick() {
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
     roiManager.close();
+
     result.complete(this.cells);
-    super.done();
+
+    this.close();
   }
 
   private List<Point> collectSelectedPoints() {

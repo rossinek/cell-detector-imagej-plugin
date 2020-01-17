@@ -53,11 +53,9 @@ public class DialogWindow extends JFrame {
   public void ok() {
     if (this.onOk != null)
       this.onOk.run();
-    this.setVisible(false);
   }
 
   public void cancel() {
-    this.setVisible(false);
     if (this.onCancel != null)
       this.onCancel.run();
   }
