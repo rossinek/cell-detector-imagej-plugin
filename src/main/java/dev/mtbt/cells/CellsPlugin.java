@@ -10,9 +10,9 @@ import java.util.List;
 import javax.swing.BoxLayout;
 import javax.swing.JComboBox;
 import javax.swing.JPanel;
-import org.scijava.Context;
 import org.scijava.command.Command;
 import org.scijava.command.CommandService;
+import org.scijava.command.DynamicCommand;
 import org.scijava.module.ModuleService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
@@ -26,13 +26,11 @@ import dev.mtbt.gui.DialogStepperStep;
 import dev.mtbt.gui.RunnableButton;
 
 @Plugin(type = Command.class, menuPath = "Developement>Other way")
-public class CellsPlugin implements Command, ImageListener, ActionListener {
+public class CellsPlugin extends DynamicCommand implements ImageListener, ActionListener {
   @Parameter
   private ImagePlus imp;
   @Parameter
   private UIService uiService;
-  @Parameter
-  private Context context;
 
   private DialogStepper dialog;
   private List<Cell> cells;
@@ -45,7 +43,6 @@ public class CellsPlugin implements Command, ImageListener, ActionListener {
 
   @Override
   public void run() {
-    System.out.println("CELLS: " + (this.cells == null ? "NULL" : this.cells.size()));
     ImagePlus.addImageListener(this);
     if (imp == null)
       return;
@@ -100,15 +97,14 @@ public class CellsPlugin implements Command, ImageListener, ActionListener {
   }
 
   protected void runDetector() {
-    System.out.println("Detector: " + detector == null ? "null" : detector);
     if (detector == null) {
       uiService.showDialog("Select detector first");
       return;
     }
     Thread t = new Thread(() -> {
       try {
-        final ModuleService ms = this.context.service(ModuleService.class);
-        final CommandService cs = this.context.service(CommandService.class);
+        final ModuleService ms = this.getContext().service(ModuleService.class);
+        final CommandService cs = this.getContext().service(CommandService.class);
         CellDetector cellDetector;
         switch (detector) {
           case "SkeletonCellDetector":
@@ -135,8 +131,8 @@ public class CellsPlugin implements Command, ImageListener, ActionListener {
     }
     Thread t = new Thread(() -> {
       try {
-        final ModuleService ms = this.context.service(ModuleService.class);
-        final CommandService cs = this.context.service(CommandService.class);
+        final ModuleService ms = this.getContext().service(ModuleService.class);
+        final CommandService cs = this.getContext().service(CommandService.class);
         CellLifeTracker cellLifeTracker;
         switch (lifeTracker) {
           case "SkeletonCellLifeTracker":

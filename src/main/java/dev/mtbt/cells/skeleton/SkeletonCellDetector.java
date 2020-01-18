@@ -14,13 +14,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
-
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
-@Plugin(type = Command.class, menuPath = "Developement>Skeleton>Cell Detector GUI")
+@Plugin(type = Command.class, menuPath = "Developement>Skeleton>Cell Detector")
 public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector {
 
   private RunnableButton selectCellsButton;
@@ -35,28 +34,25 @@ public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector
 
   @Override
   public void run() {
-    super.run();
-
+    if (!super.initComponents()) {
+      return;
+    }
     this.selectCellsButton = new RunnableButton("Select cells", this::onSelectCellsClick);
-    selectCellsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    dialogContent.add(selectCellsButton);
+    addDialogComponent(selectCellsButton);
 
     this.clearPointsButton = new RunnableButton("Clear points", this::onClearPointsClick);
-    clearPointsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    dialogContent.add(clearPointsButton);
+    addDialogComponent(clearPointsButton);
 
     this.clearSelectedCellsButton =
         new RunnableButton("Clear selected cells", this::onClearSelectedCellsClick);
-    clearSelectedCellsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    dialogContent.add(clearSelectedCellsButton);
+    addDialogComponent(clearSelectedCellsButton);
 
     this.runButton = new RunnableButton("Run!", this::onRunClick);
-    runButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    dialogContent.add(runButton);
+    addDialogComponent(runButton);
 
     this.dialog.pack();
+    this.preview();
   }
-
 
   @Override
   public Future<List<Cell>> output() {
@@ -104,9 +100,6 @@ public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector
   }
 
   protected void done() {
-    RoiManager roiManager = ImageJUtils.getRoiManager();
-    roiManager.reset();
-    roiManager.close();
     result.complete(this.cells);
     super.done();
   }
@@ -115,7 +108,6 @@ public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector
     ArrayList<Point> points = new ArrayList<>();
     PolygonRoi roi = this.impIndexMap != null ? (PolygonRoi) this.impIndexMap.getRoi() : null;
     if (roi != null) {
-      System.out.println("> collect selected points (" + roi.getFloatPolygon().npoints + ")");
       int[] xPoints = roi.getPolygon().xpoints;
       int[] yPoints = roi.getPolygon().ypoints;
       for (int i = 0; i < xPoints.length; i++) {

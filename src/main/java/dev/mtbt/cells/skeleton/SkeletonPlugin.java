@@ -1,6 +1,7 @@
 package dev.mtbt.cells.skeleton;
 
 import ij.ImagePlus;
+import ij.plugin.frame.RoiManager;
 import ij.process.FloatProcessor;
 
 import java.awt.Point;
@@ -10,18 +11,21 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.stream.Collectors;
 import javax.swing.BoxLayout;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
-import org.scijava.command.Command;
+import org.scijava.command.DynamicCommand;
 import org.scijava.plugin.Parameter;
 import org.scijava.ui.UIService;
 import dev.mtbt.HyperstackHelper;
+import dev.mtbt.ImageJUtils;
 import dev.mtbt.ShapeIndexMap;
 import dev.mtbt.gui.DialogWindow;
 import dev.mtbt.gui.RunnableSlider;
 import dev.mtbt.gui.RunnableSliderDouble;
 import dev.mtbt.util.Pair;
 
-public abstract class SkeletonPlugin implements Command {
+public abstract class SkeletonPlugin extends DynamicCommand {
 
   @Parameter
   protected ImagePlus imp;
@@ -39,10 +43,17 @@ public abstract class SkeletonPlugin implements Command {
   protected RunnableSliderDouble blurRadiusSlider;
   protected RunnableSliderDouble thresholdSlider;
 
+  boolean initialized = false;
+
   @Override
   public void run() {
-    if (this.imp == null) {
-      return;
+    this.initComponents();
+    this.preview();
+  }
+
+  protected boolean initComponents() {
+    if (this.initialized || this.imp == null) {
+      return false;
     }
 
     this.dialogContent = new JPanel();
@@ -50,32 +61,41 @@ public abstract class SkeletonPlugin implements Command {
 
     int channel = Math.min(1, imp.getNChannels());
     this.channelSlider = new RunnableSlider(1, imp.getNChannels(), channel, this::preview);
-    channelSlider.setAlignmentX(Component.CENTER_ALIGNMENT);
-    dialogContent.add(channelSlider);
-
+    addDialogComponent(new JLabel("Channel"));
+    addDialogComponent(channelSlider);
     this.frameSlider = new RunnableSlider(1, imp.getNFrames(), imp.getFrame(), this::preview);
-    frameSlider.setAlignmentX(Component.CENTER_ALIGNMENT);
-    dialogContent.add(frameSlider);
-
+    addDialogComponent(new JLabel("Frame"));
+    addDialogComponent(frameSlider);
     this.blurRadiusSlider = new RunnableSliderDouble(0.0, 10.0, 0.2, 4.0, this::preview);
-    blurRadiusSlider.setAlignmentX(Component.CENTER_ALIGNMENT);
-    dialogContent.add(blurRadiusSlider);
-
+    addDialogComponent(new JLabel("Blur"));
+    addDialogComponent(blurRadiusSlider);
     this.thresholdSlider = new RunnableSliderDouble(-1.0, 1.0, 0.1, 0.0, this::preview);
-    thresholdSlider.setAlignmentX(Component.CENTER_ALIGNMENT);
-    dialogContent.add(thresholdSlider);
+    addDialogComponent(new JLabel("Threshold"));
+    addDialogComponent(thresholdSlider);
 
     this.dialog = new DialogWindow("Skeleton plugin", this::done, this::cleanup);
+    this.dialog.setContent(dialogContent);
     this.dialog.setVisible(true);
+
+    initialized = true;
+    return true;
+  }
+
+  protected void addDialogComponent(JComponent component) {
+    component.setAlignmentX(Component.CENTER_ALIGNMENT);
+    dialogContent.add(component);
   }
 
   public void preview() {
-    computeShapeIndexMap();
-    thresholdShapeIndexMap();
-    impIndexMap.show();
+    if (this.initialized) {
+      computeShapeIndexMap();
+      thresholdShapeIndexMap();
+      impIndexMap.show();
+    }
   }
 
   protected void done() {
+    cleanup();
     this.dialog.setVisible(false);
   }
 
@@ -111,7 +131,7 @@ public abstract class SkeletonPlugin implements Command {
 
   protected Spine performSearch(Point point, Spine previous) {
     if (this.skeleton == null) {
-      this.skeleton = new Skeleton(this.impIndexMap);
+      this.skeleton = new Skeleton(this.impIndexMap.duplicate());
     }
     Spine spine = this.skeleton.findSpine(point, previous);
     return spine;
