@@ -26,9 +26,12 @@ public class DialogWindow extends JFrame {
     JPanel buttonPanel = new JPanel();
     Box buttonBox = new Box(BoxLayout.X_AXIS);
 
+
+
     this.contentPanel = new JPanel();
     this.contentPanel.setBorder(new EmptyBorder(new Insets(5, 10, 5, 10)));
     this.contentPanel.setLayout(new FlowLayout());
+
 
     this.cancelButton = new RunnableButton("cancel", this::cancel);
     this.okButton = new RunnableButton("ok", this::ok);
@@ -38,11 +41,11 @@ public class DialogWindow extends JFrame {
 
     buttonBox.setBorder(new EmptyBorder(new Insets(5, 10, 5, 10)));
     buttonBox.add(this.cancelButton);
-    buttonBox.add(Box.createHorizontalStrut(50));
+    buttonBox.add(Box.createHorizontalStrut(10));
     buttonBox.add(this.okButton);
-    buttonPanel.add(buttonBox, java.awt.BorderLayout.EAST);
-    this.getContentPane().add(buttonPanel, java.awt.BorderLayout.SOUTH);
-    this.getContentPane().add(this.contentPanel, java.awt.BorderLayout.CENTER);
+    buttonPanel.add(buttonBox, BorderLayout.EAST);
+    this.getContentPane().add(buttonPanel, BorderLayout.SOUTH);
+    this.getContentPane().add(this.contentPanel, BorderLayout.CENTER);
   }
 
   public void setContent(Component content) {

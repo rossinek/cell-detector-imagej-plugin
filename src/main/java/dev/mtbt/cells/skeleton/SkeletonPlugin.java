@@ -1,7 +1,6 @@
 package dev.mtbt.cells.skeleton;
 
 import ij.ImagePlus;
-import ij.plugin.frame.RoiManager;
 import ij.process.FloatProcessor;
 
 import java.awt.Point;
@@ -10,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.stream.Collectors;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -18,9 +18,9 @@ import org.scijava.command.DynamicCommand;
 import org.scijava.plugin.Parameter;
 import org.scijava.ui.UIService;
 import dev.mtbt.HyperstackHelper;
-import dev.mtbt.ImageJUtils;
 import dev.mtbt.ShapeIndexMap;
 import dev.mtbt.gui.DialogWindow;
+import dev.mtbt.gui.ExpandablePanel;
 import dev.mtbt.gui.RunnableSlider;
 import dev.mtbt.gui.RunnableSliderDouble;
 import dev.mtbt.util.Pair;
@@ -59,19 +59,32 @@ public abstract class SkeletonPlugin extends DynamicCommand {
     this.dialogContent = new JPanel();
     dialogContent.setLayout(new BoxLayout(dialogContent, BoxLayout.Y_AXIS));
 
-    int channel = Math.min(1, imp.getNChannels());
-    this.channelSlider = new RunnableSlider(1, imp.getNChannels(), channel, this::preview);
-    addDialogComponent(new JLabel("Channel"));
-    addDialogComponent(channelSlider);
+    this.channelSlider = new RunnableSlider(1, imp.getNChannels(), imp.getC(), this::preview);
+    this.channelSlider.showLables(1);
+    addCenteredComponent(dialogContent, new JLabel("Channel"));
+    addCenteredComponent(dialogContent, channelSlider);
+
     this.frameSlider = new RunnableSlider(1, imp.getNFrames(), imp.getFrame(), this::preview);
-    addDialogComponent(new JLabel("Frame"));
-    addDialogComponent(frameSlider);
+    this.frameSlider.showLables(Math.min(imp.getNFrames(), Math.max(imp.getNFrames() / 10, 10)));
+    addCenteredComponent(dialogContent, new JLabel("Frame"));
+    addCenteredComponent(dialogContent, frameSlider);
+
+    JPanel advancedPanel = new JPanel();
+    advancedPanel.setLayout(new BoxLayout(advancedPanel, BoxLayout.Y_AXIS));
+
     this.blurRadiusSlider = new RunnableSliderDouble(0.0, 10.0, 0.2, 4.0, this::preview);
-    addDialogComponent(new JLabel("Blur"));
-    addDialogComponent(blurRadiusSlider);
+    this.blurRadiusSlider.showLables(2);
+    addCenteredComponent(advancedPanel, new JLabel("Blur"));
+    addCenteredComponent(advancedPanel, blurRadiusSlider);
     this.thresholdSlider = new RunnableSliderDouble(-1.0, 1.0, 0.1, 0.0, this::preview);
-    addDialogComponent(new JLabel("Threshold"));
-    addDialogComponent(thresholdSlider);
+    this.thresholdSlider.showLables(1);
+    addCenteredComponent(advancedPanel, new JLabel("Threshold"));
+    addCenteredComponent(advancedPanel, thresholdSlider);
+
+    dialogContent.add(Box.createVerticalStrut(20));
+    ExpandablePanel expandablePanel =
+        new ExpandablePanel("advanced settings >>", advancedPanel, () -> this.dialog.pack());
+    addCenteredComponent(dialogContent, expandablePanel);
 
     this.dialog = new DialogWindow("Skeleton plugin", this::done, this::cleanup);
     this.dialog.setContent(dialogContent);
@@ -81,9 +94,9 @@ public abstract class SkeletonPlugin extends DynamicCommand {
     return true;
   }
 
-  protected void addDialogComponent(JComponent component) {
+  protected void addCenteredComponent(JPanel panel, JComponent component) {
     component.setAlignmentX(Component.CENTER_ALIGNMENT);
-    dialogContent.add(component);
+    panel.add(component);
   }
 
   public void preview() {

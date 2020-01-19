@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
+import javax.swing.Box;
 import javax.swing.JLabel;
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
@@ -44,16 +45,19 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeT
 
   @Override
   public void run() {
-    if (!super.initComponents()) {
+    if (this.cells == null || !super.initComponents()) {
       return;
     }
 
+    dialogContent.add(Box.createVerticalStrut(20));
     this.nFramesSlider = new RunnableSlider(1, 20, 10, null);
-    addDialogComponent(new JLabel("Track life for (#frames):"));
-    addDialogComponent(nFramesSlider);
+    this.nFramesSlider.showLables(2);
+    addCenteredComponent(dialogContent, new JLabel("Track life for (#frames):"));
+    addCenteredComponent(dialogContent, nFramesSlider);
 
+    dialogContent.add(Box.createVerticalStrut(20));
     this.runButton = new RunnableButton("Run!", this::onRunClick);
-    addDialogComponent(runButton);
+    addCenteredComponent(dialogContent, runButton);
 
     this.dialog.pack();
     this.preview();

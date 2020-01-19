@@ -1,29 +1,30 @@
 package dev.mtbt.cells.skeleton;
 
+import java.awt.ComponentOrientation;
+import java.awt.FlowLayout;
+import java.awt.Point;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
+import javax.swing.Box;
+import javax.swing.JPanel;
+import org.scijava.ItemIO;
+import org.scijava.command.Command;
+import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
 import dev.mtbt.ImageJUtils;
 import dev.mtbt.cells.Cell;
 import dev.mtbt.cells.CellDetector;
-import dev.mtbt.cells.skeleton.Spine;
 import dev.mtbt.gui.RunnableButton;
 import ij.gui.PolygonRoi;
 import ij.gui.Toolbar;
 import ij.plugin.frame.RoiManager;
 
-import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
-import org.scijava.ItemIO;
-import org.scijava.command.Command;
-import org.scijava.plugin.Parameter;
-import org.scijava.plugin.Plugin;
-
 @Plugin(type = Command.class, menuPath = "Developement>Skeleton>Cell Detector")
 public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector {
 
   private RunnableButton selectCellsButton;
-  private RunnableButton clearPointsButton;
   private RunnableButton clearSelectedCellsButton;
   private RunnableButton runButton;
 
@@ -37,18 +38,20 @@ public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector
     if (!super.initComponents()) {
       return;
     }
+
+    JPanel buttonsPanel = new JPanel();
+    buttonsPanel.setLayout(new FlowLayout());
+    buttonsPanel.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+
     this.selectCellsButton = new RunnableButton("Select cells", this::onSelectCellsClick);
-    addDialogComponent(selectCellsButton);
+    buttonsPanel.add(selectCellsButton);
+    this.runButton = new RunnableButton("Run detection", this::onRunClick);
+    buttonsPanel.add(runButton);
+    this.clearSelectedCellsButton = new RunnableButton("Reset", this::onResetClick);
+    buttonsPanel.add(clearSelectedCellsButton);
 
-    this.clearPointsButton = new RunnableButton("Clear points", this::onClearPointsClick);
-    addDialogComponent(clearPointsButton);
-
-    this.clearSelectedCellsButton =
-        new RunnableButton("Clear selected cells", this::onClearSelectedCellsClick);
-    addDialogComponent(clearSelectedCellsButton);
-
-    this.runButton = new RunnableButton("Run!", this::onRunClick);
-    addDialogComponent(runButton);
+    dialogContent.add(Box.createVerticalStrut(20));
+    addCenteredComponent(dialogContent, buttonsPanel);
 
     this.dialog.pack();
     this.preview();
@@ -66,13 +69,10 @@ public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector
     Toolbar.getInstance().setTool(Toolbar.POINT);
   }
 
-  protected void onClearPointsClick() {
+  protected void onResetClick() {
     if (this.impIndexMap != null) {
       this.impIndexMap.deleteRoi();
     }
-  }
-
-  protected void onClearSelectedCellsClick() {
     this.cells.clear();
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();

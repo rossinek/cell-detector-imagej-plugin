@@ -166,7 +166,6 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
   private void displayCells() {
     if (this.cells == null)
       return;
-    // this.imp.show();
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
     int frame = this.imp.getFrame();

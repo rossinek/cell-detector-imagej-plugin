@@ -123,10 +123,14 @@ public class Cell {
     return this.children;
   }
 
+  /**
+   * Returns descendants alive at frame `index`
+   */
   public List<Cell> evoluate(int index) {
-    if (index < this.f0)
-      throw new IllegalArgumentException();
     List<Cell> cells = new ArrayList<>();
+    if (index < this.f0) {
+      return cells;
+    }
     cells.add(this);
     for (int i = this.f0; i <= index; i++) {
       final int currentIndex = i;

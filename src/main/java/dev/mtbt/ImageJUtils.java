@@ -1,6 +1,5 @@
 package dev.mtbt;
 
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.scijava.command.Command;
