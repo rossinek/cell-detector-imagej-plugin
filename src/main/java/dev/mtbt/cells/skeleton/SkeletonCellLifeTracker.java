@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
+import javax.swing.Box;
 import javax.swing.JLabel;
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
@@ -44,16 +45,19 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeT
 
   @Override
   public void run() {
-    if (!super.initComponents()) {
+    if (this.cells == null || !super.initComponents()) {
       return;
     }
 
+    dialogContent.add(Box.createVerticalStrut(20));
     this.nFramesSlider = new RunnableSlider(1, 20, 10, null);
-    addDialogComponent(new JLabel("Track life for (#frames):"));
-    addDialogComponent(nFramesSlider);
+    this.nFramesSlider.showLables(2);
+    addCenteredComponent(dialogContent, new JLabel("Track life for (#frames):"));
+    addCenteredComponent(dialogContent, nFramesSlider);
 
+    dialogContent.add(Box.createVerticalStrut(20));
     this.runButton = new RunnableButton("Run!", this::onRunClick);
-    addDialogComponent(runButton);
+    addCenteredComponent(dialogContent, runButton);
 
     this.dialog.pack();
     this.preview();
@@ -81,18 +85,14 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeT
       this.uiService.showDialog("There are no cells to track");
       return;
     }
-    int f0 = this.cells.get(0).getF0();
-    if (!this.cells.stream().allMatch(c -> c.getF0() == f0)) {
-      this.uiService.showDialog("Not implemented for different f0s");
-    }
-
+    int f0 = this.frameSlider.getValue();
     List<Cell> cells = this.cells;
-
+    cells.forEach(cell -> cell.clearFuture(f0 + 1));
     for (int index = f0 + 1; index <= f0 + this.nFramesSlider.getValue(); index++) {
       cells = Cell.evoluate(cells, index - 1);
       final int frameIndex = index;
       this.frameSlider.setValue(frameIndex);
-      this.run();
+      this.preview();
 
       HashMap<Cell, List<Pair<Point2D, Spine>>> successors = new HashMap<>();
 
@@ -153,7 +153,7 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeT
       });
     }
 
-    this.run();
+    this.preview();
   }
 
   private void ensureValidSuccessorDirection(Spine spine, Spine successor) {
@@ -203,7 +203,7 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeT
   }
 
   protected void done() {
-    result.complete(null);
     super.done();
+    result.complete(null);
   }
 }

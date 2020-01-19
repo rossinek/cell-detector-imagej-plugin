@@ -25,7 +25,7 @@ import dev.mtbt.gui.DialogStepper;
 import dev.mtbt.gui.DialogStepperStep;
 import dev.mtbt.gui.RunnableButton;
 
-@Plugin(type = Command.class, menuPath = "Developement>Other way")
+@Plugin(type = Command.class, menuPath = "Developement>Cell detector")
 public class CellsPlugin extends DynamicCommand implements ImageListener, ActionListener {
   @Parameter
   private ImagePlus imp;
@@ -154,6 +154,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
   }
 
   protected void onDetectionEnd() {
+
     this.preview();
     this.dialog.getCurrentStep().setFinished(true);
   }
@@ -166,7 +167,6 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
   private void displayCells() {
     if (this.cells == null)
       return;
-    // this.imp.show();
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
     int frame = this.imp.getFrame();
