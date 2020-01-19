@@ -100,8 +100,8 @@ public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector
   }
 
   protected void done() {
-    result.complete(this.cells);
     super.done();
+    result.complete(this.cells);
   }
 
   private List<Point> collectSelectedPoints() {

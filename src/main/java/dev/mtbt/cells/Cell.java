@@ -84,6 +84,20 @@ public class Cell {
     return this.frames.set(index - this.f0, frame);
   }
 
+  public void clearFuture(int fromIndex) {
+    if (fromIndex <= this.getF0()) {
+      throw new IllegalArgumentException("fromIndex has to be in the future");
+    }
+    if (fromIndex <= this.getFN() + 1) {
+      this.removeChildren();
+      this.frames.subList(fromIndex - this.f0, this.frames.size()).clear();
+    } else {
+      for (Cell child : children) {
+        child.clearFuture(fromIndex);
+      }
+    }
+  }
+
   public PolygonRoi toRoi(int index) {
     CellFrame frame = this.getFrame(index);
     if (frame == null)
@@ -117,6 +131,10 @@ public class Cell {
       c2.setName(this.getFamily(), this.getGeneration() + 1,
           (this.getIndexInGeneration() - 1) * 2 + 2);
     }
+  }
+
+  public void removeChildren() {
+    this.children = new Cell[] {};
   }
 
   public Cell[] getChildren() {
