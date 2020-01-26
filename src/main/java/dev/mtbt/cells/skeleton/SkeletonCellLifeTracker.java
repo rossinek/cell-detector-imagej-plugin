@@ -5,7 +5,7 @@ import dev.mtbt.Utils;
 import dev.mtbt.cells.Cell;
 import dev.mtbt.cells.CellLifeTracker;
 import dev.mtbt.gui.RunnableButton;
-import dev.mtbt.gui.RunnableSlider;
+import dev.mtbt.gui.RunnableSpinner;
 import dev.mtbt.util.Pair;
 import ij.plugin.frame.RoiManager;
 
@@ -26,11 +26,11 @@ import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
-@Plugin(type = Command.class, menuPath = "Developement>Skeleton>Legacy Cell Life Tracker")
+@Plugin(type = Command.class, menuPath = "Development>Skeleton>Cell Life Tracker")
 public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeTracker {
 
   private RunnableButton runButton;
-  private RunnableSlider nFramesSlider;
+  private RunnableSpinner nFramesSlider;
 
   @Parameter(type = ItemIO.OUTPUT)
   private List<Cell> cells = null;
@@ -41,6 +41,7 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeT
   public void init(List<Cell> cells) {
     this.cells = cells;
     this.run();
+    this.showFirstFrameWithCells();
   }
 
   @Override
@@ -50,8 +51,7 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeT
     }
 
     dialogContent.add(Box.createVerticalStrut(20));
-    this.nFramesSlider = new RunnableSlider(1, 20, 10, null);
-    this.nFramesSlider.showLables(2);
+    this.nFramesSlider = new RunnableSpinner(20, 1, 40, null);
     addCenteredComponent(dialogContent, new JLabel("Track life for (#frames):"));
     addCenteredComponent(dialogContent, nFramesSlider);
 
@@ -68,8 +68,8 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeT
     if (this.cells != null) {
       RoiManager roiManager = ImageJUtils.getRoiManager();
       roiManager.reset();
-      Cell.evoluate(this.cells, this.frameSlider.getValue()).stream()
-          .map(cell -> cell.toRoi(this.frameSlider.getValue())).filter(roi -> roi != null)
+      Cell.evoluate(this.cells, (int) this.frameSlider.getValue()).stream()
+          .map(cell -> cell.toRoi((int) this.frameSlider.getValue())).filter(roi -> roi != null)
           .forEach(roi -> roiManager.addRoi(roi));
       roiManager.runCommand("show all");
     }
@@ -80,15 +80,25 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeT
     return this.result;
   }
 
+  protected void showFirstFrameWithCells() {
+    int frame = this.cells.isEmpty() ? 1
+        : this.cells.stream().map(c -> c.getF0()).reduce(this.cells.get(0).getF0(), Integer::min);
+    this.frameSlider.getModel().setValue(frame);
+  }
+
   protected void onRunClick() {
-    if (this.cells == null || this.cells.size() < 1) {
+    if (this.cells == null) {
       this.uiService.showDialog("There are no cells to track");
       return;
     }
-    int f0 = this.frameSlider.getValue();
-    List<Cell> cells = this.cells;
+    int f0 = (int) this.frameSlider.getValue();
+    List<Cell> cells = Cell.evoluate(this.cells, f0);
+    if (cells.size() < 1) {
+      this.uiService.showDialog("There are no cells to in current frame");
+      return;
+    }
     cells.forEach(cell -> cell.clearFuture(f0 + 1));
-    for (int index = f0 + 1; index <= f0 + this.nFramesSlider.getValue(); index++) {
+    for (int index = f0 + 1; index <= f0 + (int) this.nFramesSlider.getValue(); index++) {
       cells = Cell.evoluate(cells, index - 1);
       final int frameIndex = index;
       this.frameSlider.setValue(frameIndex);

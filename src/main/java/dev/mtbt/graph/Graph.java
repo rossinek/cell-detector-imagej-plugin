@@ -55,27 +55,30 @@ public class Graph {
     return this.edges;
   }
 
-  public Edge closestEdge(Point point) {
-    return this.closestEdgeDistance(point).getKey();
-  }
-
-  public double distance(Point point) {
+  public Pair<Point, Edge> closestEdge(Point point) {
     return this.closestEdgeDistance(point).getValue();
   }
 
-  public Pair<Edge, Double> closestEdgeDistance(Point point) {
+  public double distance(Point point) {
+    return this.closestEdgeDistance(point).getKey();
+  }
+
+  public Pair<Double, Pair<Point, Edge>> closestEdgeDistance(Point point) {
     double bestDistance = Double.POSITIVE_INFINITY;
     Edge bestEdge = null;
+    Point bestSlab = null;
     for (Edge edge : this.edges) {
       for (Point slab : edge.getSlabs()) {
         double dist = Utils.distance(point, slab);
         if (dist < bestDistance) {
           bestDistance = dist;
           bestEdge = edge;
+          bestSlab = slab;
         }
       }
     }
-    return new Pair<>(bestEdge, bestDistance);
+    Pair<Point, Edge> ref = new Pair<Point, Edge>(bestSlab, bestEdge);
+    return new Pair<>(bestDistance, ref);
   }
 
   @Override

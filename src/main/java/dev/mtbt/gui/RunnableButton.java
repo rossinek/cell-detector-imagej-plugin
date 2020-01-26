@@ -15,6 +15,8 @@ public class RunnableButton extends JButton implements ActionListener {
 
   @Override
   public void actionPerformed(ActionEvent e) {
-    this.callback.run();
+    if (this.callback != null) {
+      this.callback.run();
+    }
   }
 }

@@ -7,7 +7,7 @@
 
 ## Build / run / install
 
-Plugins should be visible in `Menu > Developement`
+Plugins should be visible in `Menu > Development`
 
 ### Build and run
 

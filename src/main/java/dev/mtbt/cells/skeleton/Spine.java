@@ -1,12 +1,12 @@
 package dev.mtbt.cells.skeleton;
 
 import dev.mtbt.graph.*;
-
+import dev.mtbt.util.Pair;
 import java.awt.geom.Point2D;
 import java.util.*;
 import java.util.stream.Collectors;
-
 import dev.mtbt.Utils;
+import dev.mtbt.cells.skeleton.SpineTraverser.SpineTraverserStep;
 
 public class Spine extends Graph {
 
@@ -15,6 +15,14 @@ public class Spine extends Graph {
 
   public Spine() {
     super();
+  }
+
+  public SpineVertex getE1() {
+    return this.e1;
+  }
+
+  public SpineVertex getE2() {
+    return this.e2;
   }
 
   public List<Point2D> toPolyline() {
@@ -32,21 +40,21 @@ public class Spine extends Graph {
     this.e2 = temp;
   }
 
-  public void traverse(GraphTraverser t) {
-    traverse(this.e1, this.e1.getBranches().first(), t);
-  }
+  // public void traverse(GraphTraverser t) {
+  // traverse(this.e1, this.e1.getBranches().first(), t);
+  // }
 
-  public void traverse(SpineVertex begin, Edge firstEdge, GraphTraverser t) {
-    SpineVertex current = begin;
-    Edge nextEdge = firstEdge;
-    while (true) {
-      t.callback(current, nextEdge.getOppositeVertex(current), nextEdge);
-      current = (SpineVertex) nextEdge.getOppositeVertex(current);
-      if (current.isLeaf())
-        break;
-      nextEdge = current.getOppositeBranch(nextEdge);
-    }
-  }
+  // public void traverse(SpineVertex begin, Edge firstEdge, GraphTraverser t) {
+  // SpineVertex current = begin;
+  // Edge nextEdge = firstEdge;
+  // while (true) {
+  // t.callback(current, nextEdge.getOppositeVertex(current), nextEdge);
+  // current = (SpineVertex) nextEdge.getOppositeVertex(current);
+  // if (current.isLeaf())
+  // break;
+  // nextEdge = current.getOppositeBranch(nextEdge);
+  // }
+  // }
 
   @Override
   public Edge addEdge(Edge e) {
@@ -66,45 +74,38 @@ public class Spine extends Graph {
   }
 
   public boolean overlaps(Spine spine) {
-    return commonEdges(spine.edges.toArray(new Edge[spine.edges.size()])) > 0;
+    return overlapType(this, spine) != OverlapType.None;
   }
 
   /**
    * Get the weakest point on spine between two points according to given score function
    */
-  public Point weakestPoint(Point p1, Point p2, PointEvaluator pointEvaluator) {
-    Edge e1 = this.closestEdge(p1);
-    Edge e2 = this.closestEdge(p2);
-    ArrayList<Point> points = findPath(e1, e2).toSlabs(false);
-    double minDist1 = Double.POSITIVE_INFINITY;
-    double minDist2 = Double.POSITIVE_INFINITY;
-    int index1 = -1, index2 = -1;
-    double dist;
-    for (int i = 0; i < points.size(); i++) {
-      dist = Utils.distance(p1, points.get(i));
-      if (dist < minDist1) {
-        minDist1 = dist;
-        index1 = i;
-      }
-      dist = Utils.distance(p2, points.get(i));
-      if (dist < minDist2) {
-        minDist2 = dist;
-        index2 = i;
-      }
-    }
-    int bi = Math.min(index1, index2);
-    int ei = Math.max(index1, index2);
-    Point weakestPoint = points.get(bi);
+  static private Point weakestPoint(List<Point> points, PointEvaluator pointEvaluator) {
+    Point weakest = points.get(0);
     double minScore = Double.POSITIVE_INFINITY;
-    for (int i = bi + 1; i < ei; i++) {
-      double score = pointEvaluator.score(points.get(i));
+    for (Point point : points) {
+      double score = pointEvaluator.score(point);
       if (score < minScore) {
         minScore = score;
-        weakestPoint = points.get(i);
+        weakest = point;
       }
     }
+    return weakest;
+  }
 
-    return weakestPoint;
+  static public OverlapType overlapType(Spine s1, Spine s2) {
+    int ces = s1.commonEdges(s2.edges.toArray(new Edge[s2.edges.size()]));
+    if (ces == 0) {
+      return OverlapType.None;
+    }
+    int cvs = s1.commonVertices(new Vertex[] {s2.e1, s2.e2});
+    if (cvs == 0) {
+      return OverlapType.Partial;
+    }
+    if (cvs == 1) {
+      return OverlapType.PartialWithVertex;
+    }
+    return OverlapType.Full;
   }
 
   /**
@@ -112,49 +113,184 @@ public class Spine extends Graph {
    *
    * @return array containing two spines: first containing p1, second containing p2
    */
-  public Spine[] split(Point p1, Point p2, PointEvaluator pointEvaluator) {
-    Spine[] spines = this.split(this.weakestPoint(p1, p2, pointEvaluator));
-    if (spines[0].distance(p1) > spines[0].distance(p2)) {
-      Collections.reverse(Arrays.asList(spines));
+  static public void splitOverlap(Pair<Point, Spine> s1, Pair<Point, Spine> s2,
+      PointEvaluator pointEvaluator) {
+    OverlapType type = overlapType(s1.getValue(), s2.getValue());
+    switch (type) {
+      case Full:
+      case Partial:
+        splitOverlapCenter(s1, s2, pointEvaluator);
+        break;
+      case PartialWithVertex:
+        assignOverlapByReference(s1, s2, pointEvaluator);
+        break;
+      default:
+        break;
     }
-    return spines;
   }
 
-  private Spine[] split(Point slab) {
+  static private void splitOverlapCenter(Pair<Point, Spine> s1, Pair<Point, Spine> s2,
+      PointEvaluator pointEvaluator) {
+
+    // 1. FIND OVERLAP PATH
+    Path path = overlapPath(s1.getValue(), s2.getValue());
+    List<Point> slabs = path.toSlabs(false);
+
+    // 2. FIND BEGIN / END SLABS ACCORDING TO REFERENCE POINTS (OR ENDS)
+    Pair<Point, Edge> ref1 = s1.getValue().closestEdge(s1.getKey());
+    int indexOfRef1 = slabs.indexOf(ref1.getKey());
+    Pair<Point, Edge> ref2 = s2.getValue().closestEdge(s2.getKey());
+    int indexOfRef2 = slabs.indexOf(ref2.getKey());
+
+    int bi = 0;
+    int ei = slabs.size() - 1;
+    if (indexOfRef1 >= 0 && indexOfRef2 >= 0) {
+      bi = Math.min(indexOfRef1, indexOfRef2) + 1;
+      ei = Math.max(indexOfRef1, indexOfRef2) - 1;
+      if (bi >= ei) {
+        throw new IllegalArgumentException("Sorry something not handled here :(");
+      }
+    } else if (indexOfRef1 >= 0 || indexOfRef2 >= 0) {
+      // Assumptions:
+      // 1) this method is implemented for partial and full overlap
+      // 2) full overlap => both reference slabs are inside slabs
+      // 3) partial overlap => both reference slabs are outside slabs
+      // because of the implementation of spine creation (see this::extend)
+      throw new IllegalArgumentException("Implemented only for Full & Partial overlap");
+    }
+
+    // 3. FIND WEAKEST POINTS BETWEEN
+    Point cutPoint = weakestPoint(slabs.subList(bi, ei + 1), pointEvaluator);
+
+    // 4. CUT BOTH SPINES
+    s1.getValue().cut(cutPoint, s1.getKey());
+    s2.getValue().cut(cutPoint, s2.getKey());
+  }
+
+  static private void assignOverlapByReference(Pair<Point, Spine> s1, Pair<Point, Spine> s2,
+      PointEvaluator pointEvaluator) {
+    // 1. DECIDE WHICH SPINE SHOULD CONTAIN OVERLAP
+    Path path = overlapPath(s1.getValue(), s2.getValue());
+    List<Point> slabs = path.toSlabs(false);
+
+    Pair<Point, Edge> ref1 = s1.getValue().closestEdge(s1.getKey());
+    Spine spineToShorten = slabs.contains(ref1.getKey()) ? s2.getValue() : s1.getValue();
+
+    // 2. REMOVE OVERLAPPING EDGES FROM SECOND SPINE
+    SpineVertex crossVertex = path.getBegin().isLeaf() ? path.getEnd() : path.getBegin();
+    Edge lastEdge = path.getBegin().isLeaf() ? crossVertex.getOppositeBranch(path.getLastEdge())
+        : crossVertex.getOppositeBranch(path.getFirstEdge());
+    spineToShorten.cutFromEdge(lastEdge, crossVertex.equals(lastEdge.getV1()) ? -1 : 1);
+
+    // 3. EXTEND SECOND SPINE IF POSSIBLE
+    // TODO
+  }
+
+  static private Path overlapPath(Spine s1, Spine s2) {
+    // get overlapping edges that are not surrounded by overlapping edges from both sides
+    List<Edge> overlapEnds = s1.edges.stream().filter(e1 -> {
+      Edge e2 = s2.edges.floor(e1);
+      if (e2 == null || !e1.equals(e2)) {
+        return false;
+      }
+      Edge e1n1 = ((SpineVertex) e1.getV1()).getOppositeBranch(e1);
+      Edge e1n2 = ((SpineVertex) e1.getV2()).getOppositeBranch(e1);
+      Edge e2n1 = ((SpineVertex) e2.getV1()).getOppositeBranch(e2);
+      Edge e2n2 = ((SpineVertex) e2.getV2()).getOppositeBranch(e2);
+
+      // have different neighbors
+      return e1n1 == null || e1n2 == null || e2n1 == null || e2n2 == null || !e1n1.equals(e2n1)
+          || !e1n2.equals(e2n2);
+    }).collect(Collectors.toList());
+    if (overlapEnds.isEmpty()) {
+      throw new IllegalArgumentException("No overlap!");
+    } else if (overlapEnds.size() > 2) {
+      throw new IllegalArgumentException("Something goes terribly wrong here");
+    }
+    return s1.findPath(overlapEnds.get(0),
+        overlapEnds.size() > 1 ? overlapEnds.get(1) : overlapEnds.get(0));
+  }
+
+  private void cut(Point slab, Point referencePoint) {
     Edge edge = findEdge(slab);
-    Edge[] newEdges = this.splitEdge(edge, slab);
-    Spine[] spines = new Spine[2];
-    for (int i = 0; i < 2; i++) {
-      Edge newBranch = newEdges[i];
-      Spine spine = new Spine();
-      spines[i] = spine;
-      spine.addEdge(newBranch);
-      SpineVertex start =
-          (SpineVertex) (newBranch.isIncidentTo(edge.getV1()) ? edge.getV1() : edge.getV2());
-      if (!start.isLeaf()) {
-        Edge firstEdge = start.getOppositeBranch(edge);
-        traverse(start, firstEdge, (v1, v2, e) -> spine.addEdge(e));
+    int indexOfSlab = edge.getSlabs().indexOf(slab);
+    if (indexOfSlab == 0) {
+      this.cutOnVertex((SpineVertex) edge.getV1(), referencePoint);
+    } else if (indexOfSlab == edge.getSlabs().size() - 1) {
+      this.cutOnVertex((SpineVertex) edge.getV2(), referencePoint);
+    } else {
+      this.cutOnEdge(edge, indexOfSlab, referencePoint);
+    }
+  }
+
+  private void cutOnVertex(SpineVertex vertex, Point referencePoint) {
+    Pair<Point, Edge> ref = this.closestEdge(referencePoint);
+    SpineTraverserStep stepWithVertex = null;
+
+    SpineTraverser st = new SpineTraverser((SpineVertex) ref.getValue().getV1(), ref.getValue());
+    for (SpineTraverserStep step = st.next(); st.hasNext(); step = st.next()) {
+      if (step.v2.equals(vertex)) {
+        stepWithVertex = step;
       }
     }
-    return spines;
+    if (stepWithVertex == null) {
+      st = new SpineTraverser((SpineVertex) ref.getValue().getV2(), ref.getValue());
+      for (SpineTraverserStep step = st.next(); st.hasNext(); step = st.next()) {
+        if (step.v2.equals(vertex)) {
+          stepWithVertex = step;
+        }
+      }
+    }
+    if (stepWithVertex != null) {
+      int direction = stepWithVertex.edge.getV2().equals(vertex) ? 1 : -1;
+      this.cutFromEdge(stepWithVertex.edge, direction);
+    }
   }
 
-  private Edge[] splitEdge(Edge e, Point slab) {
-    int index = e.getSlabs().indexOf(slab);
-    ArrayList<Point> slabs1 = new ArrayList<>();
-    ArrayList<Point> slabs2 = new ArrayList<>();
-    if (index >= 0) {
-      slabs1.addAll(e.getSlabs().subList(0, index));
-      slabs2.addAll(e.getSlabs().subList(index + 1, e.getSlabs().size()));
+  private void cutOnEdge(Edge edge, int slabIndex, Point referencePoint) {
+    int direction = this.referenceDirection(edge, slabIndex, referencePoint);
+    SpineVertex preservedPoint = (SpineVertex) (direction > 0 ? edge.getV2() : edge.getV1());
+    this.cutFromEdge(edge, -1 * direction);
+    this.shorten((SpineVertex) edge.getOppositeVertex(preservedPoint));
+    Edge[] edges = splitEdge(edge, slabIndex);
+    this.addEdge(direction > 0 ? edges[1] : edges[0]);
+  }
+
+  /**
+   * keep edge but cut everything from its vertex (according to direction)
+   */
+  private void cutFromEdge(Edge edge, int direction) {
+    SpineVertex newEndpoint = (SpineVertex) (direction > 0 ? edge.getV2() : edge.getV1());
+    SpineTraverser traverser =
+        new SpineTraverser((SpineVertex) edge.getOppositeVertex(newEndpoint), edge);
+    SpineVertex currentEndpoint = newEndpoint;
+    while (traverser.hasNext()) {
+      SpineTraverserStep step = traverser.next();
+      currentEndpoint = step.v2;
     }
-    Vertex vSlab1 = new SpineVertex();
-    vSlab1.addPoint(slab);
-    Vertex v1 = e.getV1().cloneUnconnected();
-    Vertex vSlab2 = vSlab1.cloneUnconnected();
-    Vertex v2 = e.getV2().cloneUnconnected();
-    Edge edge1 = new Edge(vSlab1, v1, slabs1);
-    Edge edge2 = new Edge(vSlab2, v2, slabs2);
-    return new Edge[] {edge1, edge2};
+    while (!currentEndpoint.equals(newEndpoint)) {
+      currentEndpoint = this.shorten(currentEndpoint);
+    }
+  }
+
+  /**
+   * returns -1 or +1 according to slab indices (e.g. -1 means direction to v1)
+   */
+  private int referenceDirection(Edge edge, int slabIndex, Point referencePoint) {
+    Pair<Point, Edge> reference = closestEdge(referencePoint);
+    if (reference.getValue().equals(edge)) {
+      int indexOfRefSlab = edge.getSlabs().indexOf(reference.getKey());
+      return indexOfRefSlab < slabIndex ? -1 : 1;
+    }
+    int direction = 1;
+    SpineTraverser traverser = new SpineTraverser((SpineVertex) edge.getV2(), edge);
+    while (traverser.hasNext()) {
+      SpineTraverserStep step = traverser.next();
+      if (step.edge.equals(reference.getValue())) {
+        direction = -1;
+      }
+    }
+    return direction;
   }
 
   /**
@@ -187,7 +323,7 @@ public class Spine extends Graph {
     else if (this.e2.equals(endpoint))
       endpointOrigin = this.e2.getSkeletonVertex();
     else
-      throw new IllegalArgumentException("Vertex is not spline endpoint");
+      throw new IllegalArgumentException("Vertex is not spine endpoint");
     if (endpointOrigin.isLeaf())
       return false;
     Edge newEdge = strongestValidEdge(endpointOrigin.getBranches(), endpoint, edgeEvaluator);
@@ -206,6 +342,52 @@ public class Spine extends Graph {
         && !e.getV2().equals(this.e2)) {
       throw new IllegalArgumentException("Edge is not connected with Spine endpoints");
     }
+  }
+
+  private SpineVertex shorten(SpineVertex endpoint) {
+    if (this.edges.size() < 1) {
+      throw new IllegalArgumentException("No edges!");
+    }
+    if (!endpoint.equals(this.e1) && !endpoint.equals(this.e2)) {
+      throw new IllegalArgumentException("Vertex is not spine endpoint");
+    }
+    if (this.edges.size() == 1) {
+      this.edges.clear();
+      this.vertices.clear();
+      this.e1 = null;
+      this.e2 = null;
+      return null;
+    }
+    Edge edge = endpoint.getBranches().first();
+    SpineVertex newEndpoint = (SpineVertex) edge.getOppositeVertex(endpoint);
+    newEndpoint.getBranches().remove(edge);
+    this.edges.remove(edge);
+    this.vertices.remove(endpoint);
+    if (endpoint.equals(this.e1)) {
+      this.e1 = newEndpoint;
+    } else {
+      this.e2 = newEndpoint;
+    }
+    return newEndpoint;
+  }
+
+  static private Edge[] splitEdge(Edge e, int slabIndex) {
+    if (slabIndex <= 0 || slabIndex >= e.getSlabs().size() - 1)
+      throw new IllegalArgumentException();
+    ArrayList<Point> slabs1 = new ArrayList<>();
+    ArrayList<Point> slabs2 = new ArrayList<>();
+    if (slabIndex >= 0) {
+      slabs1.addAll(e.getSlabs().subList(0, slabIndex));
+      slabs2.addAll(e.getSlabs().subList(slabIndex + 1, e.getSlabs().size()));
+    }
+    Vertex vSlab1 = new SpineVertex();
+    vSlab1.addPoint(e.getSlabs().get(slabIndex));
+    Vertex v1 = e.getV1().cloneUnconnected();
+    Vertex vSlab2 = vSlab1.cloneUnconnected();
+    Vertex v2 = e.getV2().cloneUnconnected();
+    Edge edge1 = new Edge(vSlab1, v1, slabs1);
+    Edge edge2 = new Edge(vSlab2, v2, slabs2);
+    return new Edge[] {edge1, edge2};
   }
 
   private int commonVertices(Edge edge) {
@@ -299,6 +481,10 @@ public class Spine extends Graph {
     this.e2 = s.e2;
   }
 
+  public enum OverlapType {
+    None, Partial, PartialWithVertex, Full,
+  }
+
   class Path {
     private SpineVertex begin;
     private SpineVertex end;
@@ -347,22 +533,15 @@ public class Spine extends Graph {
 
       if (addEndpoints)
         points.add(begin.center());
-      traverse((v1, v2, e) -> points.addAll(e.getDirectedSlabs(v1)));
+
+      SpineTraverser traverser = new SpineTraverser(begin, firstEdge, end);
+      while (traverser.hasNext()) {
+        SpineTraverserStep step = traverser.next();
+        points.addAll(step.edge.getDirectedSlabs(step.v1));
+      }
       if (addEndpoints)
         points.add(end.center());
       return points;
-    }
-
-    public void traverse(GraphTraverser t) {
-      SpineVertex current = begin;
-      Edge nextEdge = firstEdge;
-      while (true) {
-        t.callback(current, nextEdge.getOppositeVertex(current), nextEdge);
-        current = (SpineVertex) nextEdge.getOppositeVertex(current);
-        if (current.equals(end))
-          break;
-        nextEdge = current.getOppositeBranch(nextEdge);
-      }
     }
   }
 }

@@ -2,6 +2,7 @@ package dev.mtbt.gui;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.Component;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -19,20 +20,23 @@ public class DialogStepper extends JFrame implements ActionListener {
 
   private int stepIndex = 0;
   private List<DialogStepperStep> steps = new ArrayList<>();
+  private Component footer;
 
   private Runnable onCancel;
 
   public DialogStepper(String title, Runnable onCancel) {
+    this(title, null, onCancel);
+  }
+
+  public DialogStepper(String title, Component footer, Runnable onCancel) {
     super(title);
     this.onCancel = onCancel;
+    this.footer = footer;
     initComponents();
     pack();
   }
 
   private void initComponents() {
-    JPanel buttonPanel = new JPanel();
-    Box buttonBox = new Box(BoxLayout.X_AXIS);
-
     this.cardPanel = new JPanel();
     this.cardPanel.setBorder(new EmptyBorder(new Insets(5, 10, 5, 10)));
     this.cardPanel.setLayout(new CardLayout());
@@ -47,18 +51,28 @@ public class DialogStepper extends JFrame implements ActionListener {
 
     this.nextButton.setEnabled(false);
 
-    buttonPanel.setLayout(new BorderLayout());
-    buttonPanel.add(new JSeparator(), BorderLayout.NORTH);
+    JPanel footerPanel = new JPanel();
+    footerPanel.setLayout(new BorderLayout());
+    footerPanel.add(new JSeparator(), BorderLayout.NORTH);
 
+    Box buttonBox = new Box(BoxLayout.X_AXIS);
     buttonBox.setBorder(new EmptyBorder(new Insets(5, 10, 5, 10)));
     buttonBox.add(this.backButton);
     buttonBox.add(Box.createHorizontalStrut(10));
     buttonBox.add(this.nextButton);
     buttonBox.add(Box.createHorizontalStrut(30));
     buttonBox.add(this.cancelButton);
-    buttonPanel.add(buttonBox, java.awt.BorderLayout.EAST);
-    this.getContentPane().add(buttonPanel, java.awt.BorderLayout.SOUTH);
+    footerPanel.add(buttonBox, java.awt.BorderLayout.CENTER);
+
+    if (this.footer != null) {
+      Box footerBox = new Box(BoxLayout.X_AXIS);
+      footerBox.setBorder(new EmptyBorder(new Insets(0, 10, 5, 10)));
+      footerBox.add(this.footer);
+      footerPanel.add(footerBox, java.awt.BorderLayout.SOUTH);
+    }
+
     this.getContentPane().add(cardPanel, java.awt.BorderLayout.CENTER);
+    this.getContentPane().add(footerPanel, java.awt.BorderLayout.SOUTH);
   }
 
   @Override

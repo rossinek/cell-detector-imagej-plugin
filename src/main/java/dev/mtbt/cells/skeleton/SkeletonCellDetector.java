@@ -21,7 +21,7 @@ import ij.gui.PolygonRoi;
 import ij.gui.Toolbar;
 import ij.plugin.frame.RoiManager;
 
-@Plugin(type = Command.class, menuPath = "Developement>Skeleton>Cell Detector")
+@Plugin(type = Command.class, menuPath = "Development>Skeleton>Cell Detector")
 public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector {
 
   private RunnableButton selectCellsButton;
@@ -63,15 +63,15 @@ public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector
   }
 
   protected void onSelectCellsClick() {
-    if (this.impIndexMap != null) {
-      this.impIndexMap.deleteRoi();
+    if (this.impPreview != null) {
+      this.impPreview.deleteRoi();
     }
     Toolbar.getInstance().setTool(Toolbar.POINT);
   }
 
   protected void onResetClick() {
-    if (this.impIndexMap != null) {
-      this.impIndexMap.deleteRoi();
+    if (this.impPreview != null) {
+      this.impPreview.deleteRoi();
     }
     this.cells.clear();
     RoiManager roiManager = ImageJUtils.getRoiManager();
@@ -80,7 +80,7 @@ public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector
   }
 
   protected void onRunClick() {
-    PolygonRoi roi = this.impIndexMap != null ? (PolygonRoi) this.impIndexMap.getRoi() : null;
+    PolygonRoi roi = this.impPreview != null ? (PolygonRoi) this.impPreview.getRoi() : null;
     if (roi == null) {
       this.uiService.showDialog("There are no points selected.");
       return;
@@ -89,13 +89,13 @@ public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector
     List<Spine> spines = this.performSearch(this.collectSelectedPoints(), null);
     for (int index = 0; index < spines.size(); index++) {
       char character = (char) ('A' + index);
-      cells.add(new Cell(this.frameSlider.getValue(), new SpineCellFrame(spines.get(index)),
+      cells.add(new Cell((int) this.frameSlider.getValue(), new SpineCellFrame(spines.get(index)),
           "" + character));
     }
 
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
-    cells.forEach(cell -> roiManager.addRoi(cell.toRoi(this.frameSlider.getValue())));
+    cells.forEach(cell -> roiManager.addRoi(cell.toRoi((int) this.frameSlider.getValue())));
     roiManager.runCommand("show all");
   }
 
@@ -106,7 +106,7 @@ public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector
 
   private List<Point> collectSelectedPoints() {
     ArrayList<Point> points = new ArrayList<>();
-    PolygonRoi roi = this.impIndexMap != null ? (PolygonRoi) this.impIndexMap.getRoi() : null;
+    PolygonRoi roi = this.impPreview != null ? (PolygonRoi) this.impPreview.getRoi() : null;
     if (roi != null) {
       int[] xPoints = roi.getPolygon().xpoints;
       int[] yPoints = roi.getPolygon().ypoints;

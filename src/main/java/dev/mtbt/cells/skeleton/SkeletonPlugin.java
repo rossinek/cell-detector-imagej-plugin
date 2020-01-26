@@ -21,8 +21,8 @@ import dev.mtbt.HyperstackHelper;
 import dev.mtbt.ShapeIndexMap;
 import dev.mtbt.gui.DialogWindow;
 import dev.mtbt.gui.ExpandablePanel;
-import dev.mtbt.gui.RunnableSlider;
-import dev.mtbt.gui.RunnableSliderDouble;
+import dev.mtbt.gui.RunnableCheckBox;
+import dev.mtbt.gui.RunnableSpinner;
 import dev.mtbt.util.Pair;
 
 public abstract class SkeletonPlugin extends DynamicCommand {
@@ -33,15 +33,19 @@ public abstract class SkeletonPlugin extends DynamicCommand {
   @Parameter
   protected UIService uiService;
 
-  protected ImagePlus impIndexMap = null;
+  private ImagePlus impOriginalFrame = null;
+  private ImagePlus impIndexMap = null;
+
+  protected ImagePlus impPreview = new ImagePlus();
   protected Skeleton skeleton = null;
 
   protected DialogWindow dialog;
   protected JPanel dialogContent;
-  protected RunnableSlider channelSlider;
-  protected RunnableSlider frameSlider;
-  protected RunnableSliderDouble blurRadiusSlider;
-  protected RunnableSliderDouble thresholdSlider;
+  protected RunnableSpinner channelSlider;
+  protected RunnableSpinner frameSlider;
+  protected RunnableSpinner blurRadiusSlider;
+  protected RunnableSpinner thresholdSlider;
+  protected RunnableCheckBox originalCheckBox;
 
   boolean initialized = false;
 
@@ -59,27 +63,25 @@ public abstract class SkeletonPlugin extends DynamicCommand {
     this.dialogContent = new JPanel();
     dialogContent.setLayout(new BoxLayout(dialogContent, BoxLayout.Y_AXIS));
 
-    this.channelSlider = new RunnableSlider(1, imp.getNChannels(), imp.getC(), this::preview);
-    this.channelSlider.showLables(1);
+    this.channelSlider = new RunnableSpinner(imp.getC(), 1, imp.getNChannels(), this::preview);
     addCenteredComponent(dialogContent, new JLabel("Channel"));
     addCenteredComponent(dialogContent, channelSlider);
 
-    this.frameSlider = new RunnableSlider(1, imp.getNFrames(), imp.getFrame(), this::preview);
-    this.frameSlider.showLables(Math.min(imp.getNFrames(), Math.max(imp.getNFrames() / 10, 10)));
+    this.frameSlider = new RunnableSpinner(imp.getFrame(), 1, imp.getNFrames(), this::preview);
     addCenteredComponent(dialogContent, new JLabel("Frame"));
     addCenteredComponent(dialogContent, frameSlider);
 
     JPanel advancedPanel = new JPanel();
     advancedPanel.setLayout(new BoxLayout(advancedPanel, BoxLayout.Y_AXIS));
 
-    this.blurRadiusSlider = new RunnableSliderDouble(0.0, 10.0, 0.2, 4.0, this::preview);
-    this.blurRadiusSlider.showLables(2);
+    this.blurRadiusSlider = new RunnableSpinner(4.0, 0.0, 10.0, 0.2, this::preview);
     addCenteredComponent(advancedPanel, new JLabel("Blur"));
     addCenteredComponent(advancedPanel, blurRadiusSlider);
-    this.thresholdSlider = new RunnableSliderDouble(-1.0, 1.0, 0.1, 0.0, this::preview);
-    this.thresholdSlider.showLables(1);
+    this.thresholdSlider = new RunnableSpinner(0.0, -1.0, 1.0, 0.1, this::preview);
     addCenteredComponent(advancedPanel, new JLabel("Threshold"));
     addCenteredComponent(advancedPanel, thresholdSlider);
+    this.originalCheckBox = new RunnableCheckBox("show original frame", this::preview);
+    addCenteredComponent(advancedPanel, originalCheckBox);
 
     dialogContent.add(Box.createVerticalStrut(20));
     ExpandablePanel expandablePanel =
@@ -103,7 +105,12 @@ public abstract class SkeletonPlugin extends DynamicCommand {
     if (this.initialized) {
       computeShapeIndexMap();
       thresholdShapeIndexMap();
-      impIndexMap.show();
+      if (this.originalCheckBox.isSelected()) {
+        impPreview.setProcessor(impOriginalFrame.getProcessor());
+      } else {
+        impPreview.setProcessor(impIndexMap.getProcessor());
+      }
+      impPreview.show();
     }
   }
 
@@ -113,15 +120,16 @@ public abstract class SkeletonPlugin extends DynamicCommand {
   }
 
   protected void cleanup() {
-    impIndexMap.close();
+    impPreview.close();
     this.dialog.setVisible(false);
   }
 
   private void computeShapeIndexMap() {
     this.skeleton = null;
-    ImagePlus frame = HyperstackHelper.extractFrame(imp, channelSlider.getValue(), imp.getSlice(),
-        frameSlider.getValue());
-    ImagePlus indexMap = ShapeIndexMap.getShapeIndexMap(frame, blurRadiusSlider.getDoubleValue());
+    this.impOriginalFrame = HyperstackHelper.extractFrame(imp, (int) channelSlider.getValue(),
+        imp.getSlice(), (int) frameSlider.getValue());
+    ImagePlus indexMap =
+        ShapeIndexMap.getShapeIndexMap(this.impOriginalFrame, (double) blurRadiusSlider.getValue());
     if (impIndexMap == null) {
       impIndexMap = indexMap;
     } else {
@@ -134,7 +142,7 @@ public abstract class SkeletonPlugin extends DynamicCommand {
     int length = impIndexMap.getProcessor().getPixelCount();
     for (int i = 0; i < length; i++) {
       float val = fp.getf(i);
-      fp.setf(i, val > thresholdSlider.getDoubleValue() ? val : Float.NEGATIVE_INFINITY);
+      fp.setf(i, val > (double) thresholdSlider.getValue() ? val : Float.NEGATIVE_INFINITY);
     }
   }
 
@@ -172,12 +180,13 @@ public abstract class SkeletonPlugin extends DynamicCommand {
         Pair<Point, Spine> spine = iterator.next();
         for (int i = iterator.nextIndex(); i < spines.size(); i++) {
           if (spine.getValue().overlaps(spines.get(i).getValue())) {
-            Point p1 = spine.getKey();
-            Point p2 = spines.get(i).getKey();
-            Spine[] newSpines = spine.getValue().split(new dev.mtbt.graph.Point(p1),
-                new dev.mtbt.graph.Point(p2), p -> this.impIndexMap.getProcessor().getf(p.x, p.y));
-            spine.getValue().assign(newSpines[0]);
-            spines.get(i).getValue().assign(newSpines[1]);
+            dev.mtbt.graph.Point p1 = new dev.mtbt.graph.Point(spine.getKey());
+            dev.mtbt.graph.Point p2 = new dev.mtbt.graph.Point(spines.get(i).getKey());
+            Spine.splitOverlap(new Pair<>(p1, spine.getValue()),
+                new Pair<>(p2, spines.get(i).getValue()),
+                p -> this.impIndexMap.getProcessor().getf(p.x, p.y));
+            // spine.getValue().assign(newSpines[0]);
+            // spines.get(i).getValue().assign(newSpines[1]);
             change = true;
             break;
           }

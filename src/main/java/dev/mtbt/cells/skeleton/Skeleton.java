@@ -72,7 +72,7 @@ public class Skeleton extends Graph {
    * @return poly line containing point
    */
   public Spine findSpine(java.awt.Point initialPoint) {
-    Edge initialEdge = this.closestEdge(new Point(initialPoint));
+    Edge initialEdge = this.closestEdge(new Point(initialPoint)).getValue();
     Spine spine = new Spine();
     if (initialEdge != null) {
       spine.addEdge(initialEdge);
@@ -97,7 +97,7 @@ public class Skeleton extends Graph {
     // if (initialEdge != null) {
     // spine.addEdge(initialEdge);
     // spine.extend((edge, start) -> {
-    // double scalledLowestValue = this.weakestSlabEvaluator.score(edge, start);
+    // double scaledLowestValue = this.weakestSlabEvaluator.score(edge, start);
     // double distance = 0;
     // int counter = 0;
     // for (Point slab : edge.getSlabs()) {
@@ -107,9 +107,9 @@ public class Skeleton extends Graph {
     // counter++;
     // }
     // }
-    // double scalledEdgeDistance =
+    // double scaledEdgeDistance =
     // counter > 0 ? distance / (counter * EDGE_EVALUATOR_RADIUS) : Double.POSITIVE_INFINITY;
-    // return scalledLowestValue - scalledEdgeDistance;
+    // return scaledLowestValue - scaledEdgeDistance;
     // });
     // }
     // return spine;

@@ -7,6 +7,7 @@ import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JComboBox;
 import javax.swing.JPanel;
@@ -24,8 +25,9 @@ import dev.mtbt.cells.skeleton.SkeletonCellLifeTracker;
 import dev.mtbt.gui.DialogStepper;
 import dev.mtbt.gui.DialogStepperStep;
 import dev.mtbt.gui.RunnableButton;
+import dev.mtbt.gui.RunnableCheckBox;
 
-@Plugin(type = Command.class, menuPath = "Developement>Cell detector")
+@Plugin(type = Command.class, menuPath = "Development>Cell detector")
 public class CellsPlugin extends DynamicCommand implements ImageListener, ActionListener {
   @Parameter
   private ImagePlus imp;
@@ -34,12 +36,16 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
 
   private DialogStepper dialog;
   private List<Cell> cells;
-  JComboBox<String> detectorSelect;
+
+  private JComboBox<String> detectorSelect;
   final String[] detectorOptions = {"SkeletonCellDetector"};
   private String detector = detectorOptions[0];
-  JComboBox<String> lifeTrackerSelect;
+
+  private JComboBox<String> lifeTrackerSelect;
   final String[] lifeTrackerOptions = {"SkeletonCellLifeTracker"};
   private String lifeTracker = lifeTrackerOptions[0];
+
+  private RunnableCheckBox showEndpointsCheckBox;
 
   @Override
   public void run() {
@@ -67,10 +73,18 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
     lifeTrackerButton.setAlignmentX(Component.CENTER_ALIGNMENT);
     cardLifeTracking.add(lifeTrackerButton);
 
-    this.dialog = new DialogStepper("Custom GUI test title", this::cleanup);
+    this.dialog =
+        new DialogStepper("Main plugin window", this.createSettingsComponent(), this::cleanup);
     this.dialog.registerStep(new DialogStepperStep(dialog, "Detection", cardDetection));
     this.dialog.registerStep(new DialogStepperStep(dialog, "LifeTracking", cardLifeTracking));
     this.dialog.setVisible(true);
+  }
+
+  private Component createSettingsComponent() {
+    Box settingsBox = new Box(BoxLayout.X_AXIS);
+    this.showEndpointsCheckBox = new RunnableCheckBox("show endpoints", this::preview);
+    settingsBox.add(showEndpointsCheckBox);
+    return settingsBox;
   }
 
   @Override
@@ -153,15 +167,22 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
     t.start();
   }
 
-  protected void onDetectionEnd() {
+  protected void showFirstFrameWithCells() {
+    int frame = this.cells.isEmpty() ? 1
+        : this.cells.stream().map(c -> c.getF0()).reduce(this.cells.get(0).getF0(), Integer::min);
+    this.imp.setT(frame);
+  }
 
-    this.preview();
+  protected void onDetectionEnd() {
     this.dialog.getCurrentStep().setFinished(true);
+    this.showFirstFrameWithCells();
+    this.preview();
   }
 
   protected void onLifeTrackingEnd() {
-    this.preview();
     this.dialog.getCurrentStep().setFinished(true);
+    this.showFirstFrameWithCells();
+    this.preview();
   }
 
   private void displayCells() {
@@ -172,8 +193,10 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
     int frame = this.imp.getFrame();
     List<Cell> currentCells = Cell.evoluate(this.cells, frame);
     currentCells.stream().forEach(cell -> roiManager.addRoi(cell.toRoi(frame)));
-    currentCells.stream()
-        .forEach(cell -> cell.endsToRois(frame).forEach(roi -> roiManager.addRoi(roi)));
+    if (this.showEndpointsCheckBox.isSelected()) {
+      currentCells.stream()
+          .forEach(cell -> cell.endsToRois(frame).forEach(roi -> roiManager.addRoi(roi)));
+    }
 
     roiManager.runCommand("show all with labels");
     roiManager.runCommand("usenames", "true");
