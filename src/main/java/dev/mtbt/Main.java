@@ -21,10 +21,6 @@ public class Main {
       for (ImagePlus imp : imps) {
         ij.ui().show(imp);
       }
-      // ij.command().run(SelectBlobsPlugin.class, true);
-
-      // Bezier_Curve_Tool bezierTool = new Bezier_Curve_Tool();
-      // bezierTool.run("");
     }
   }
 

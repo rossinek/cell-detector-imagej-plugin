@@ -1,4 +1,4 @@
-package dev.mtbt;
+package dev.mtbt.vendor.shapeindex;
 
 import ij.ImagePlus;
 import ij.ImageStack;

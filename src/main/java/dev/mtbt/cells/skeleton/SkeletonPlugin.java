@@ -18,12 +18,12 @@ import org.scijava.command.DynamicCommand;
 import org.scijava.plugin.Parameter;
 import org.scijava.ui.UIService;
 import dev.mtbt.HyperstackHelper;
-import dev.mtbt.ShapeIndexMap;
 import dev.mtbt.gui.DialogWindow;
 import dev.mtbt.gui.ExpandablePanel;
 import dev.mtbt.gui.RunnableCheckBox;
 import dev.mtbt.gui.RunnableSpinner;
 import dev.mtbt.util.Pair;
+import dev.mtbt.vendor.shapeindex.ShapeIndexMap;
 
 public abstract class SkeletonPlugin extends DynamicCommand {
 
