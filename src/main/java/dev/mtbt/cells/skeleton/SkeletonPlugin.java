@@ -147,24 +147,20 @@ public abstract class SkeletonPlugin extends DynamicCommand {
   }
 
   protected Spine performSearch(Point point) {
-    return this.performSearch(point, null);
-  }
-
-  protected Spine performSearch(Point point, Spine previous) {
     if (this.skeleton == null) {
       this.skeleton = new Skeleton(this.impIndexMap.duplicate());
     }
-    Spine spine = this.skeleton.findSpine(point, previous);
+    Spine spine = this.skeleton.findSpine(point);
     return spine;
   }
 
-  protected List<Spine> performSearch(List<Point> points, Spine previous) {
+  protected List<Spine> performSearch(List<Point> points) {
     if (points.isEmpty()) {
       return new ArrayList<Spine>();
     }
 
     ArrayList<Pair<Point, Spine>> spines =
-        points.stream().map(point -> new Pair<>(point, this.performSearch(point, previous)))
+        points.stream().map(point -> new Pair<>(point, this.performSearch(point)))
             .collect(Collectors.toCollection(ArrayList::new));
 
     return this.fixConflicts(spines).stream().map(pair -> pair.getValue())
@@ -196,4 +192,9 @@ public abstract class SkeletonPlugin extends DynamicCommand {
 
     return spines;
   }
+
+  // protected Point2D extendToEdge(Point2D from, Point2D to) {
+  //   this.thresholdSlider
+
+  // }
 }

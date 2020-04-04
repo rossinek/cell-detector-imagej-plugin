@@ -3,7 +3,9 @@ package dev.mtbt.cells.skeleton;
 import dev.mtbt.ImageJUtils;
 import dev.mtbt.Utils;
 import dev.mtbt.cells.Cell;
-import dev.mtbt.cells.CellLifeTracker;
+import dev.mtbt.cells.CellFrame;
+import dev.mtbt.cells.ICellLifeTracker;
+import dev.mtbt.cells.PolylineCellFrame;
 import dev.mtbt.gui.RunnableButton;
 import dev.mtbt.gui.RunnableSpinner;
 import dev.mtbt.util.Pair;
@@ -27,7 +29,7 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
 @Plugin(type = Command.class, menuPath = "Development>Skeleton>Cell Life Tracker")
-public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeTracker {
+public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLifeTracker {
 
   private RunnableButton runButton;
   private RunnableSpinner nFramesSlider;
@@ -110,34 +112,33 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeT
         // generate spines for some points on previous spine frame
         // get generated spine that is closest to all points
         // add it as next frame to cell
-        SpineCellFrame frame = (SpineCellFrame) cell.getFrame(frameIndex - 1);
+        CellFrame frame = cell.getFrame(frameIndex - 1);
         List<Double> ratioCandidates = Arrays.asList(0.1, 0.2, 0.4, 0.6, 0.8, 0.9);
         List<Point2D> pointCandidates = ratioCandidates.stream()
             .map(ratio -> frame.pointAlongLine(ratio)).collect(Collectors.toList());
-        Pair<Point2D, Spine> nextSpine =
-            this.bestCandidateForNewSpine(pointCandidates, frame.getSpine());
+        Pair<Point2D, Spine> nextSpine = this.bestCandidateForNewSpine(pointCandidates);
 
         List<Pair<Point2D, Spine>> nextSpines = new ArrayList<>(Arrays.asList(nextSpine));
 
         int candidateIndex = pointCandidates.indexOf(nextSpine.getKey());
         double nextSpineLength = Utils.polylineLength(nextSpine.getValue().toPolyline());
         double prevSpineLength = frame.getLength();
-        int nratios = ratioCandidates.size();
+        int nRatios = ratioCandidates.size();
         if (nextSpineLength < 0.9 * prevSpineLength) {
           List<Double> oppositeRatios;
-          if ((double) candidateIndex >= nratios / 2.0) {
-            oppositeRatios = ratioCandidates.subList(0, nratios / 2);
+          if ((double) candidateIndex >= nRatios / 2.0) {
+            oppositeRatios = ratioCandidates.subList(0, nRatios / 2);
           } else {
-            oppositeRatios = ratioCandidates.subList((int) Math.ceil(nratios / 2.0), nratios);
+            oppositeRatios = ratioCandidates.subList((int) Math.ceil(nRatios / 2.0), nRatios);
           }
 
           List<Point2D> oppositePointCandidates = oppositeRatios.stream()
               .map(ratio -> frame.pointAlongLine(ratio)).collect(Collectors.toList());
           Pair<Point2D, Spine> anotherNextSpine =
-              this.bestCandidateForNewSpine(oppositePointCandidates, frame.getSpine());
+              this.bestCandidateForNewSpine(oppositePointCandidates);
           nextSpines.add(anotherNextSpine);
 
-          if ((double) candidateIndex < nratios / 2.0) {
+          if ((double) candidateIndex < nRatios / 2.0) {
             Collections.reverse(nextSpines);
           }
         }
@@ -150,14 +151,16 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeT
 
       successors.forEach((cell, list) -> {
         if (list.size() < 2) {
-          Spine prevSpine = ((SpineCellFrame) cell.getFrame(frameIndex - 1)).getSpine();
-          this.ensureValidSuccessorDirection(prevSpine, list.get(0).getValue());
-          cell.setFrame(frameIndex, new SpineCellFrame(list.get(0).getValue()));
+          CellFrame prevCellFrame = cell.getFrame(frameIndex - 1);
+          this.ensureValidSuccessorDirection(prevCellFrame, list.get(0).getValue());
+          cell.setFrame(frameIndex, new PolylineCellFrame(list.get(0).getValue().toPolyline()));
         } else {
           this.ensureValidSiblingsDirections(
               list.stream().map(Pair::getValue).collect(Collectors.toList()));
-          Cell c1 = new Cell(frameIndex, new SpineCellFrame(list.get(0).getValue()));
-          Cell c2 = new Cell(frameIndex, new SpineCellFrame(list.get(1).getValue()));
+          Cell c1 =
+              new Cell(frameIndex, new PolylineCellFrame(list.get(0).getValue().toPolyline()));
+          Cell c2 =
+              new Cell(frameIndex, new PolylineCellFrame(list.get(1).getValue().toPolyline()));
           cell.setChildren(c1, c2);
         }
       });
@@ -166,11 +169,11 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeT
     this.preview();
   }
 
-  private void ensureValidSuccessorDirection(Spine spine, Spine successor) {
-    double bb = spine.getBegin().distance(successor.getBegin());
-    double be = spine.getBegin().distance(successor.getEnd());
-    double eb = spine.getEnd().distance(successor.getBegin());
-    double ee = spine.getEnd().distance(successor.getEnd());
+  private void ensureValidSuccessorDirection(CellFrame cellFrame, Spine successor) {
+    double bb = cellFrame.getBegin().distance(successor.getBegin());
+    double be = cellFrame.getBegin().distance(successor.getEnd());
+    double eb = cellFrame.getEnd().distance(successor.getBegin());
+    double ee = cellFrame.getEnd().distance(successor.getEnd());
     double min = Math.min(bb, Math.min(be, Math.min(eb, ee)));
 
     if (bb != min && ee != min) {
@@ -201,11 +204,10 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements CellLifeT
     }
   }
 
-  private Pair<Point2D, Spine> bestCandidateForNewSpine(List<Point2D> pointCandidates,
-      Spine previousSpine) {
+  private Pair<Point2D, Spine> bestCandidateForNewSpine(List<Point2D> pointCandidates) {
     return pointCandidates.stream().map(point2d -> {
       Point point = Utils.toAwtPoint(point2d);
-      Spine spine = this.performSearch(Arrays.asList(point), previousSpine).get(0);
+      Spine spine = this.performSearch(Arrays.asList(point)).get(0);
       double score = pointCandidates.stream().reduce(0.0,
           (acc, candidate) -> acc + point2d.distance(candidate), (v0, v1) -> v0 + v1);
       return new Pair<>(new Pair<>(point2d, spine), score);

@@ -29,7 +29,7 @@ public class Spine extends Graph {
     ArrayList<Point> points = new ArrayList<>();
     if (this.e1 != null) {
       points = this.toPath().toSlabs(true);
-      points = Utils.simplifyPolyLine(points, 2);
+      points = Utils.simplifyPolyline(points, 2);
     }
     return points.stream().map(p -> p.toPoint2D()).collect(Collectors.toCollection(ArrayList::new));
   }
@@ -80,7 +80,7 @@ public class Spine extends Graph {
   /**
    * Get the weakest point on spine between two points according to given score function
    */
-  static private Point weakestPoint(List<Point> points, PointEvaluator pointEvaluator) {
+  static private Point weakestPoint(List<Point> points, IPointEvaluator pointEvaluator) {
     Point weakest = points.get(0);
     double minScore = Double.POSITIVE_INFINITY;
     for (Point point : points) {
@@ -114,7 +114,7 @@ public class Spine extends Graph {
    * @return array containing two spines: first containing p1, second containing p2
    */
   static public void splitOverlap(Pair<Point, Spine> s1, Pair<Point, Spine> s2,
-      PointEvaluator pointEvaluator) {
+      IPointEvaluator pointEvaluator) {
     OverlapType type = overlapType(s1.getValue(), s2.getValue());
     switch (type) {
       case Full:
@@ -130,7 +130,7 @@ public class Spine extends Graph {
   }
 
   static private void splitOverlapCenter(Pair<Point, Spine> s1, Pair<Point, Spine> s2,
-      PointEvaluator pointEvaluator) {
+      IPointEvaluator pointEvaluator) {
 
     // 1. FIND OVERLAP PATH
     Path path = overlapPath(s1.getValue(), s2.getValue());
@@ -168,7 +168,7 @@ public class Spine extends Graph {
   }
 
   static private void assignOverlapByReference(Pair<Point, Spine> s1, Pair<Point, Spine> s2,
-      PointEvaluator pointEvaluator) {
+      IPointEvaluator pointEvaluator) {
     // 1. DECIDE WHICH SPINE SHOULD CONTAIN OVERLAP
     Path path = overlapPath(s1.getValue(), s2.getValue());
     List<Point> slabs = path.toSlabs(false);
@@ -296,12 +296,13 @@ public class Spine extends Graph {
   /**
    * Extend spine based on original graph
    */
-  public void extend(EdgeEvaluator edgeEvaluator) {
+  public void extend(IEdgeEvaluator edgeEvaluator) {
     while (extend(e1, edgeEvaluator));
     while (extend(e2, edgeEvaluator));
   }
 
-  private Edge strongestValidEdge(Set<Edge> candidates, Vertex start, EdgeEvaluator edgeEvaluator) {
+  private Edge strongestValidEdge(Set<Edge> candidates, Vertex start,
+      IEdgeEvaluator edgeEvaluator) {
     double bestScore = Double.NEGATIVE_INFINITY;
     Edge bestEdge = null;
     for (Edge candidate : candidates) {
@@ -316,7 +317,7 @@ public class Spine extends Graph {
     return bestEdge;
   }
 
-  public boolean extend(Vertex endpoint, EdgeEvaluator edgeEvaluator) {
+  public boolean extend(Vertex endpoint, IEdgeEvaluator edgeEvaluator) {
     Vertex endpointOrigin;
     if (this.e1.equals(endpoint))
       endpointOrigin = this.e1.getSkeletonVertex();

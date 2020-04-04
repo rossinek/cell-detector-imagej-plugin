@@ -15,14 +15,15 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import dev.mtbt.ImageJUtils;
 import dev.mtbt.cells.Cell;
-import dev.mtbt.cells.CellDetector;
+import dev.mtbt.cells.ICellDetector;
+import dev.mtbt.cells.PolylineCellFrame;
 import dev.mtbt.gui.RunnableButton;
 import ij.gui.PolygonRoi;
 import ij.gui.Toolbar;
 import ij.plugin.frame.RoiManager;
 
 @Plugin(type = Command.class, menuPath = "Development>Skeleton>Cell Detector")
-public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector {
+public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetector {
 
   private RunnableButton selectCellsButton;
   private RunnableButton clearSelectedCellsButton;
@@ -86,11 +87,11 @@ public class SkeletonCellDetector extends SkeletonPlugin implements CellDetector
       return;
     }
 
-    List<Spine> spines = this.performSearch(this.collectSelectedPoints(), null);
+    List<Spine> spines = this.performSearch(this.collectSelectedPoints());
     for (int index = 0; index < spines.size(); index++) {
       char character = (char) ('A' + index);
-      cells.add(new Cell((int) this.frameSlider.getValue(), new SpineCellFrame(spines.get(index)),
-          "" + character));
+      cells.add(new Cell((int) this.frameSlider.getValue(),
+          new PolylineCellFrame(spines.get(index).toPolyline()), "" + character));
     }
 
     RoiManager roiManager = ImageJUtils.getRoiManager();

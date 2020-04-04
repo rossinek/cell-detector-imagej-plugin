@@ -3,7 +3,7 @@ package dev.mtbt.cells.skeleton;
 import dev.mtbt.Utils;
 import dev.mtbt.graph.Graph;
 import dev.mtbt.graph.Edge;
-import dev.mtbt.graph.EdgeEvaluator;
+import dev.mtbt.graph.IEdgeEvaluator;
 import dev.mtbt.graph.Point;
 import dev.mtbt.graph.Vertex;
 import ij.ImagePlus;
@@ -27,7 +27,7 @@ public class Skeleton extends Graph {
 
   private final double EDGE_EVALUATOR_RADIUS = 10;
 
-  private EdgeEvaluator weakestSlabEvaluator = (edge, start) -> {
+  private IEdgeEvaluator weakestSlabEvaluator = (edge, start) -> {
     double lowestValue = Double.POSITIVE_INFINITY;
     for (Point slab : edge.getSlabs()) {
       double dist = Utils.distance(slab, start.getPoints());
@@ -79,40 +79,6 @@ public class Skeleton extends Graph {
       spine.extend(this.weakestSlabEvaluator);
     }
     return spine;
-  }
-
-  /**
-   * Find finite poly line containing point close to reference spine
-   *
-   * @param initialPoint should lay on skeleton
-   * @param reference    reference spine
-   * @return poly line containing point close to reference spine
-   */
-  public Spine findSpine(java.awt.Point initialPoint, Spine reference) {
-    // if (reference == null) {
-    return this.findSpine(initialPoint);
-    // }
-    // Edge initialEdge = this.closestEdge(new Point(initialPoint));
-    // Spine spine = new Spine();
-    // if (initialEdge != null) {
-    // spine.addEdge(initialEdge);
-    // spine.extend((edge, start) -> {
-    // double scaledLowestValue = this.weakestSlabEvaluator.score(edge, start);
-    // double distance = 0;
-    // int counter = 0;
-    // for (Point slab : edge.getSlabs()) {
-    // double dist = Utils.distance(slab, start.getPoints());
-    // if (dist <= EDGE_EVALUATOR_RADIUS) {
-    // distance += reference.distance(new Point(slab.x, slab.y));
-    // counter++;
-    // }
-    // }
-    // double scaledEdgeDistance =
-    // counter > 0 ? distance / (counter * EDGE_EVALUATOR_RADIUS) : Double.POSITIVE_INFINITY;
-    // return scaledLowestValue - scaledEdgeDistance;
-    // });
-    // }
-    // return spine;
   }
 
   public ImagePlus toImagePlus() {

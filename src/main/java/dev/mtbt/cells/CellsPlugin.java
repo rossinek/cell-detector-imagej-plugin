@@ -119,11 +119,11 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
       try {
         final ModuleService ms = this.getContext().service(ModuleService.class);
         final CommandService cs = this.getContext().service(CommandService.class);
-        CellDetector cellDetector;
+        ICellDetector cellDetector;
         switch (detector) {
           case "SkeletonCellDetector":
             cellDetector =
-                (CellDetector) ms.run(cs.getCommand(SkeletonCellDetector.class), true).get();
+                (ICellDetector) ms.run(cs.getCommand(SkeletonCellDetector.class), true).get();
             break;
           default:
             uiService.showDialog("No such detector");
@@ -147,11 +147,11 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
       try {
         final ModuleService ms = this.getContext().service(ModuleService.class);
         final CommandService cs = this.getContext().service(CommandService.class);
-        CellLifeTracker cellLifeTracker;
+        ICellLifeTracker cellLifeTracker;
         switch (lifeTracker) {
           case "SkeletonCellLifeTracker":
             cellLifeTracker =
-                (CellLifeTracker) ms.run(cs.getCommand(SkeletonCellLifeTracker.class), true).get();
+                (ICellLifeTracker) ms.run(cs.getCommand(SkeletonCellLifeTracker.class), true).get();
             break;
           default:
             uiService.showDialog("No such life tracker");

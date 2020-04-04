@@ -1,5 +1,5 @@
 package dev.mtbt.graph;
 
-public interface PointEvaluator {
+public interface IPointEvaluator {
   double score(Point p);
 }

@@ -43,7 +43,7 @@ public class Utils {
    * @param tolerance tolerance of simplification
    * @return simplified poly line
    */
-  public static ArrayList<Point> simplifyPolyLineOneWay(List<Point> polyLine, double tolerance) {
+  public static ArrayList<Point> simplifyPolylineOneWay(List<Point> polyLine, double tolerance) {
     double maxDistance = 0;
     int maxIndex = 0;
 
@@ -60,9 +60,9 @@ public class Utils {
 
     ArrayList<Point> results = new ArrayList<>();
     if (maxDistance > tolerance) {
-      results.addAll(simplifyPolyLineOneWay(polyLine.subList(0, maxIndex), tolerance));
+      results.addAll(simplifyPolylineOneWay(polyLine.subList(0, maxIndex), tolerance));
       results
-          .addAll(simplifyPolyLineOneWay(polyLine.subList(maxIndex, polyLine.size()), tolerance));
+          .addAll(simplifyPolylineOneWay(polyLine.subList(maxIndex, polyLine.size()), tolerance));
     } else if (polyLine.size() > 1) {
       results.add(polyLine.get(0));
       results.add(polyLine.get(polyLine.size() - 1));
@@ -72,10 +72,10 @@ public class Utils {
     return results;
   }
 
-  public static ArrayList<Point> simplifyPolyLine(List<Point> polyLine, double tolerance) {
-    ArrayList<Point> result = simplifyPolyLineOneWay(polyLine, tolerance);
+  public static ArrayList<Point> simplifyPolyline(List<Point> polyLine, double tolerance) {
+    ArrayList<Point> result = simplifyPolylineOneWay(polyLine, tolerance);
     Collections.reverse(result);
-    return simplifyPolyLineOneWay(result, tolerance);
+    return simplifyPolylineOneWay(result, tolerance);
   }
 
   public static double polylineLength(List<Point2D> polyline) {
