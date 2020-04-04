@@ -40,6 +40,16 @@ public class Spine extends Graph {
     this.e2 = temp;
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o)
+      return true;
+    if (!Spine.class.isAssignableFrom(o.getClass()))
+      return false;
+    final Spine s = (Spine) o;
+    return Spine.overlapType(this, s) == OverlapType.Full;
+  }
+
   // public void traverse(GraphTraverser t) {
   // traverse(this.e1, this.e1.getBranches().first(), t);
   // }

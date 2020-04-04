@@ -16,7 +16,6 @@ import org.scijava.plugin.Plugin;
 import dev.mtbt.ImageJUtils;
 import dev.mtbt.cells.Cell;
 import dev.mtbt.cells.ICellDetector;
-import dev.mtbt.cells.PolylineCellFrame;
 import dev.mtbt.gui.RunnableButton;
 import ij.gui.PolygonRoi;
 import ij.gui.Toolbar;
@@ -91,7 +90,7 @@ public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetecto
     for (int index = 0; index < spines.size(); index++) {
       char character = (char) ('A' + index);
       cells.add(new Cell((int) this.frameSlider.getValue(),
-          new PolylineCellFrame(spines.get(index).toPolyline()), "" + character));
+          this.spineToCellFrame(spines.get(index)), "" + character));
     }
 
     RoiManager roiManager = ImageJUtils.getRoiManager();

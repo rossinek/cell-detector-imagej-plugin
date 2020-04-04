@@ -113,7 +113,7 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
         // get generated spine that is closest to all points
         // add it as next frame to cell
         CellFrame frame = cell.getFrame(frameIndex - 1);
-        List<Double> ratioCandidates = Arrays.asList(0.1, 0.2, 0.4, 0.6, 0.8, 0.9);
+        List<Double> ratioCandidates = Arrays.asList(0.2, 0.4, 0.6, 0.8);
         List<Point2D> pointCandidates = ratioCandidates.stream()
             .map(ratio -> frame.pointAlongLine(ratio)).collect(Collectors.toList());
         Pair<Point2D, Spine> nextSpine = this.bestCandidateForNewSpine(pointCandidates);
@@ -136,10 +136,12 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
               .map(ratio -> frame.pointAlongLine(ratio)).collect(Collectors.toList());
           Pair<Point2D, Spine> anotherNextSpine =
               this.bestCandidateForNewSpine(oppositePointCandidates);
-          nextSpines.add(anotherNextSpine);
 
-          if ((double) candidateIndex < nRatios / 2.0) {
-            Collections.reverse(nextSpines);
+          if (!nextSpine.getValue().equals(anotherNextSpine.getValue())) {
+            nextSpines.add(anotherNextSpine);
+            if ((double) candidateIndex < nRatios / 2.0) {
+              Collections.reverse(nextSpines);
+            }
           }
         }
         successors.put(cell, nextSpines);
@@ -153,14 +155,12 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
         if (list.size() < 2) {
           CellFrame prevCellFrame = cell.getFrame(frameIndex - 1);
           this.ensureValidSuccessorDirection(prevCellFrame, list.get(0).getValue());
-          cell.setFrame(frameIndex, new PolylineCellFrame(list.get(0).getValue().toPolyline()));
+          cell.setFrame(frameIndex, this.spineToCellFrame(list.get(0).getValue()));
         } else {
           this.ensureValidSiblingsDirections(
               list.stream().map(Pair::getValue).collect(Collectors.toList()));
-          Cell c1 =
-              new Cell(frameIndex, new PolylineCellFrame(list.get(0).getValue().toPolyline()));
-          Cell c2 =
-              new Cell(frameIndex, new PolylineCellFrame(list.get(1).getValue().toPolyline()));
+          Cell c1 = new Cell(frameIndex, this.spineToCellFrame(list.get(0).getValue()));
+          Cell c2 = new Cell(frameIndex, this.spineToCellFrame(list.get(1).getValue()));
           cell.setChildren(c1, c2);
         }
       });

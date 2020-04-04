@@ -5,6 +5,7 @@ import ij.process.FloatProcessor;
 
 import java.awt.Point;
 import java.awt.Component;
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
@@ -18,6 +19,10 @@ import org.scijava.command.DynamicCommand;
 import org.scijava.plugin.Parameter;
 import org.scijava.ui.UIService;
 import dev.mtbt.HyperstackHelper;
+import dev.mtbt.Utils;
+import dev.mtbt.cells.CellFrame;
+import dev.mtbt.cells.PolylineCellFrame;
+import dev.mtbt.graph.Vertex;
 import dev.mtbt.gui.DialogWindow;
 import dev.mtbt.gui.ExpandablePanel;
 import dev.mtbt.gui.RunnableCheckBox;
@@ -46,6 +51,7 @@ public abstract class SkeletonPlugin extends DynamicCommand {
   protected RunnableSpinner blurRadiusSlider;
   protected RunnableSpinner thresholdSlider;
   protected RunnableCheckBox originalCheckBox;
+  protected RunnableCheckBox skeletonCheckBox;
 
   boolean initialized = false;
 
@@ -82,6 +88,8 @@ public abstract class SkeletonPlugin extends DynamicCommand {
     addCenteredComponent(advancedPanel, thresholdSlider);
     this.originalCheckBox = new RunnableCheckBox("show original frame", this::preview);
     addCenteredComponent(advancedPanel, originalCheckBox);
+    this.skeletonCheckBox = new RunnableCheckBox("show skeleton", this::preview);
+    addCenteredComponent(advancedPanel, skeletonCheckBox);
 
     dialogContent.add(Box.createVerticalStrut(20));
     ExpandablePanel expandablePanel =
@@ -107,6 +115,9 @@ public abstract class SkeletonPlugin extends DynamicCommand {
       thresholdShapeIndexMap();
       if (this.originalCheckBox.isSelected()) {
         impPreview.setProcessor(impOriginalFrame.getProcessor());
+      } else if (this.skeletonCheckBox.isSelected()) {
+        this.skeleton = new Skeleton(this.impIndexMap.duplicate());
+        impPreview.setProcessor(this.skeleton.toImagePlus().getProcessor());
       } else {
         impPreview.setProcessor(impIndexMap.getProcessor());
       }
@@ -181,8 +192,6 @@ public abstract class SkeletonPlugin extends DynamicCommand {
             Spine.splitOverlap(new Pair<>(p1, spine.getValue()),
                 new Pair<>(p2, spines.get(i).getValue()),
                 p -> this.impIndexMap.getProcessor().getf(p.x, p.y));
-            // spine.getValue().assign(newSpines[0]);
-            // spines.get(i).getValue().assign(newSpines[1]);
             change = true;
             break;
           }
@@ -193,8 +202,41 @@ public abstract class SkeletonPlugin extends DynamicCommand {
     return spines;
   }
 
-  // protected Point2D extendToEdge(Point2D from, Point2D to) {
-  //   this.thresholdSlider
+  protected CellFrame spineToCellFrame(Spine spine) {
+    List<Point2D> polyline = spine.toPolyline();
+    if (polyline.size() >= 2) {
+      Vertex sv1 = spine.getE1().getSkeletonVertex();
+      Vertex sv2 = spine.getE2().getSkeletonVertex();
+      if (sv1 != null && sv1.isLeaf()) {
+        polyline.set(0, tryExtendLineToBlobEnd(polyline.get(1), polyline.get(0)));
+      }
+      if (sv2 != null && sv2.isLeaf()) {
+        int last = polyline.size() - 1;
+        polyline.set(last, tryExtendLineToBlobEnd(polyline.get(last - 1), polyline.get(last)));
+      }
+    }
+    return new PolylineCellFrame(polyline);
+  }
 
-  // }
+  private Point2D tryExtendLineToBlobEnd(Point2D lineBegin, Point2D lineEnd) {
+    int searchRadius = 20;
+    // vector
+    double vx = lineEnd.getX() - lineBegin.getX();
+    double vy = lineEnd.getY() - lineBegin.getY();
+    double length = Math.sqrt((vx * vx + vy * vy));
+    vx = vx / length;
+    vy = vy / length;
+
+    Point2D searchEnd =
+        new Point2D.Double(lineEnd.getX() + vx * searchRadius, lineEnd.getY() + vy * searchRadius);
+    List<Point> line = Utils.rasterizeLine(lineEnd, searchEnd);
+    double threshold = (double) thresholdSlider.getValue();
+    for (int index = 0; index < line.size(); index++) {
+      Point point = line.get(index);
+      if (this.impIndexMap.getProcessor().getf(point.x, point.y) <= threshold) {
+        return index > 0 ? line.get(index - 1) : lineEnd;
+      }
+    }
+    return lineEnd;
+  }
 }

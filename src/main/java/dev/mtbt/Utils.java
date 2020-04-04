@@ -86,7 +86,36 @@ public class Utils {
         .getValue();
   }
 
-  public static java.awt.Point toAwtPoint(java.awt.geom.Point2D point2d) {
+  public static java.awt.Point toAwtPoint(Point2D point2d) {
     return new java.awt.Point((int) Math.round(point2d.getX()), (int) Math.round(point2d.getY()));
+  }
+
+  public static ArrayList<java.awt.Point> rasterizeLine(Point2D l0, Point2D l1) {
+    ArrayList<java.awt.Point> line = new ArrayList<>();
+    int x0 = (int) Math.round(l0.getX());
+    int x1 = (int) Math.round(l1.getX());
+    int y0 = (int) Math.round(l0.getY());
+    int y1 = (int) Math.round(l1.getY());
+
+    int dx = Math.abs(x1 - x0);
+    int sx = x0 < x1 ? 1 : -1;
+    int dy = -Math.abs(y1 - y0);
+    int sy = y0 < y1 ? 1 : -1;
+    int err = dx + dy; /* error value e_xy */
+
+    while (x0 != x1 || y0 != y1) {
+      line.add(new java.awt.Point(x0, y0));
+      int e2 = 2 * err;
+      if (e2 >= dy) {
+        err += dy;
+        x0 += sx;
+      }
+      if (e2 <= dx) {
+        err += dx;
+        y0 += sy;
+      }
+    }
+    line.add(new java.awt.Point(x1, y1));
+    return line;
   }
 }
