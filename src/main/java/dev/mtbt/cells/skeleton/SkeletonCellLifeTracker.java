@@ -5,7 +5,6 @@ import dev.mtbt.Utils;
 import dev.mtbt.cells.Cell;
 import dev.mtbt.cells.CellFrame;
 import dev.mtbt.cells.ICellLifeTracker;
-import dev.mtbt.cells.PolylineCellFrame;
 import dev.mtbt.gui.RunnableButton;
 import dev.mtbt.gui.RunnableSpinner;
 import dev.mtbt.util.Pair;
@@ -70,9 +69,9 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
     if (this.cells != null) {
       RoiManager roiManager = ImageJUtils.getRoiManager();
       roiManager.reset();
-      Cell.evoluate(this.cells, (int) this.frameSlider.getValue()).stream()
-          .map(cell -> cell.toRoi((int) this.frameSlider.getValue())).filter(roi -> roi != null)
-          .forEach(roi -> roiManager.addRoi(roi));
+      Cell.evolve(this.cells, (int) this.frameSlider.getValue()).stream()
+          .map(cell -> cell.getObservedRoi((int) this.frameSlider.getValue()))
+          .filter(roi -> roi != null).forEach(roi -> roiManager.addRoi(roi));
       roiManager.runCommand("show all");
     }
   }
@@ -94,14 +93,14 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
       return;
     }
     int f0 = (int) this.frameSlider.getValue();
-    List<Cell> cells = Cell.evoluate(this.cells, f0);
+    List<Cell> cells = Cell.evolve(this.cells, f0);
     if (cells.size() < 1) {
       this.uiService.showDialog("There are no cells to in current frame");
       return;
     }
     cells.forEach(cell -> cell.clearFuture(f0 + 1));
     for (int index = f0 + 1; index <= f0 + (int) this.nFramesSlider.getValue(); index++) {
-      cells = Cell.evoluate(cells, index - 1);
+      cells = Cell.evolve(cells, index - 1);
       final int frameIndex = index;
       this.frameSlider.setValue(frameIndex);
       this.preview();

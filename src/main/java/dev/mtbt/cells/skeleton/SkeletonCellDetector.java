@@ -95,7 +95,8 @@ public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetecto
 
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
-    cells.forEach(cell -> roiManager.addRoi(cell.toRoi((int) this.frameSlider.getValue())));
+    cells
+        .forEach(cell -> roiManager.addRoi(cell.getObservedRoi((int) this.frameSlider.getValue())));
     roiManager.runCommand("show all");
   }
 

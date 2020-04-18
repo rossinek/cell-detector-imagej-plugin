@@ -1,16 +1,23 @@
 package dev.mtbt.cells;
 
 import java.awt.Color;
+import java.awt.Polygon;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.stream.Collectors;
+import dev.mtbt.Utils;
+import ij.ImagePlus;
 import ij.gui.PointRoi;
 import ij.gui.PolygonRoi;
 import ij.gui.Roi;
+import ij.gui.RoiListener;
 
-public class Cell {
+public class Cell implements RoiListener {
+  private static final String PROPERTY_CELL_FRAME_ID = "cell-frame-id";
+
   private String name = null;
 
   protected ArrayList<CellFrame> frames = new ArrayList<>();
@@ -19,9 +26,13 @@ public class Cell {
 
   private Cell[] children = new Cell[] {};
 
+  // Hashtable<cellFrameId, roiHashCode>
+  private Hashtable<String, Integer> lastRoiHashCodes = new Hashtable<>();
+
   public Cell(int f0, CellFrame first) {
     this.f0 = f0;
     this.frames.add(first);
+    Roi.addRoiListener(this);
   }
 
   public Cell(int f0, CellFrame first, String family) {
@@ -98,12 +109,19 @@ public class Cell {
     }
   }
 
-  public PolygonRoi toRoi(int index) {
+  public PolygonRoi getObservedRoi(int index) {
     CellFrame frame = this.getFrame(index);
-    if (frame == null)
+    if (frame == null) {
       return null;
-    return this.toRoi(frame);
-
+    }
+    PolygonRoi roi = this.toRoi(frame);
+    if (this.name != null) {
+      roi.setName(this.getName());
+    }
+    roi.setProperty(PROPERTY_CELL_FRAME_ID, this.getCellFrameId(index));
+    String cellFrameId = this.getCellFrameId(index);
+    this.lastRoiHashCodes.put(cellFrameId, this.getPolygonRoiHashCode(roi));
+    return roi;
   }
 
   public List<Roi> endsToRois(int index) {
@@ -144,7 +162,7 @@ public class Cell {
   /**
    * Returns descendants alive at frame `index`
    */
-  public List<Cell> evoluate(int index) {
+  public List<Cell> evolve(int index) {
     List<Cell> cells = new ArrayList<>();
     if (index < this.f0) {
       return cells;
@@ -161,12 +179,20 @@ public class Cell {
     return cells;
   }
 
-  public static List<Cell> evoluate(List<Cell> cells, int index) {
-    return cells.stream().flatMap(cell -> cell.evoluate(index).stream())
-        .collect(Collectors.toList());
+  public static List<Cell> evolve(List<Cell> cells, int index) {
+    return cells.stream().flatMap(cell -> cell.evolve(index).stream()).collect(Collectors.toList());
   }
 
-  PolygonRoi toRoi(CellFrame frame) {
+  private String getCellFrameId(int index) {
+    return this.hashCode() + ":" + index;
+  }
+
+  private int getIndexByCellFrameId(String cellFrameId) {
+    String[] parts = cellFrameId.split(":");
+    return Integer.parseInt(parts[parts.length - 1]);
+  }
+
+  private PolygonRoi toRoi(CellFrame frame) {
     if (frame == null)
       return null;
     List<Point2D> polyline = frame.toPolyline();
@@ -177,8 +203,34 @@ public class Cell {
       yPoints[i] = (float) polyline.get(i).getY();
     }
     PolygonRoi polylineRoi = new PolygonRoi(xPoints, yPoints, Roi.POLYLINE);
-    if (this.name != null)
-      polylineRoi.setName(this.name);
     return polylineRoi;
+  }
+
+  @Override
+  public void roiModified(ImagePlus imp, int id) {
+    // TODO: what about DELETED and COMPLETED ?
+    // System.out.println("roiModified: " + id);
+    if (imp == null) {
+      return;
+    }
+    Roi modifiedRoi = imp.getRoi();
+    String cellFrameId = modifiedRoi.getProperty(PROPERTY_CELL_FRAME_ID);
+    if (modifiedRoi != null && modifiedRoi.getType() == Roi.POLYLINE
+        && this.lastRoiHashCodes.containsKey(cellFrameId)
+        && (id == RoiListener.MOVED || id == RoiListener.EXTENDED || id == RoiListener.MODIFIED)) {
+      PolygonRoi modifiedPolygonRoi = (PolygonRoi) modifiedRoi;
+      // System.out.println("Checking that thing... 🕵️‍♂️");
+      int lastRoiHashCode = this.lastRoiHashCodes.get(cellFrameId);
+      if (lastRoiHashCode != this.getPolygonRoiHashCode(modifiedPolygonRoi)) {
+        int index = this.getIndexByCellFrameId(cellFrameId);
+        this.getFrame(index).fitPolyline(Utils.toPolyline(modifiedPolygonRoi.getFloatPolygon()));
+      }
+    }
+  }
+
+  private int getPolygonRoiHashCode(PolygonRoi roi) {
+    Polygon polygon = roi.getPolygon();
+    String str = Arrays.toString(polygon.xpoints) + Arrays.toString(polygon.ypoints);
+    return str.hashCode();
   }
 }

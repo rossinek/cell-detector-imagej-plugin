@@ -39,6 +39,11 @@ public class CellFrameTest {
     public List<Point2D> toPolyline() {
       return CellFrameTest.polyline;
     }
+
+    @Override
+    public void fitPolyline(List<Point2D> polyline) {
+      CellFrameTest.polyline = new ArrayList<>(polyline);
+    }
   }
 
   @Test

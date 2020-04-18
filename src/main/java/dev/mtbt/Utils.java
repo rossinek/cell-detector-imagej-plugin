@@ -2,7 +2,9 @@ package dev.mtbt;
 
 import dev.mtbt.graph.*;
 import dev.mtbt.util.Pair;
+import ij.process.FloatPolygon;
 import java.util.*;
+import java.awt.Polygon;
 import java.awt.geom.Point2D;
 
 public class Utils {
@@ -117,5 +119,21 @@ public class Utils {
     }
     line.add(new java.awt.Point(x1, y1));
     return line;
+  }
+
+  public static List<Point2D> toPolyline(Polygon polygon) {
+    ArrayList<Point2D> points = new ArrayList<>();
+    for (int i = 0; i < polygon.npoints; i++) {
+      points.add(new Point2D.Double(polygon.xpoints[i], polygon.ypoints[i]));
+    }
+    return points;
+  }
+
+  public static List<Point2D> toPolyline(FloatPolygon polygon) {
+    ArrayList<Point2D> points = new ArrayList<>();
+    for (int i = 0; i < polygon.npoints; i++) {
+      points.add(new Point2D.Double(polygon.xpoints[i], polygon.ypoints[i]));
+    }
+    return points;
   }
 }

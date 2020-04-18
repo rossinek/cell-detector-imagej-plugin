@@ -191,8 +191,8 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
     int frame = this.imp.getFrame();
-    List<Cell> currentCells = Cell.evoluate(this.cells, frame);
-    currentCells.stream().forEach(cell -> roiManager.addRoi(cell.toRoi(frame)));
+    List<Cell> currentCells = Cell.evolve(this.cells, frame);
+    currentCells.stream().forEach(cell -> roiManager.addRoi(cell.getObservedRoi(frame)));
     if (this.showEndpointsCheckBox.isSelected()) {
       currentCells.stream()
           .forEach(cell -> cell.endsToRois(frame).forEach(roi -> roiManager.addRoi(roi)));

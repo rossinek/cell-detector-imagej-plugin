@@ -13,6 +13,8 @@ abstract public class CellFrame {
 
   abstract public List<Point2D> toPolyline();
 
+  abstract public void fitPolyline(List<Point2D> polyline);
+
   public double getLength() {
     List<Point2D> polyline = this.toPolyline();
     return polyline.stream().skip(1)
