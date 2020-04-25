@@ -391,13 +391,30 @@ public class Spine extends Graph {
       slabs1.addAll(e.getSlabs().subList(0, slabIndex));
       slabs2.addAll(e.getSlabs().subList(slabIndex + 1, e.getSlabs().size()));
     }
-    Vertex vSlab1 = new SpineVertex();
-    vSlab1.addPoint(e.getSlabs().get(slabIndex));
+    Vertex vSlab = new SpineVertex();
+    vSlab.addPoint(e.getSlabs().get(slabIndex));
     Vertex v1 = e.getV1().cloneUnconnected();
-    Vertex vSlab2 = vSlab1.cloneUnconnected();
+    e.getV1().getBranches().forEach(branch -> {
+      if (branch != e) {
+        v1.setBranch(branch);
+      }
+    });
+
     Vertex v2 = e.getV2().cloneUnconnected();
-    Edge edge1 = new Edge(vSlab1, v1, slabs1);
-    Edge edge2 = new Edge(vSlab2, v2, slabs2);
+    e.getV2().getBranches().forEach(branch -> {
+      if (branch != e) {
+        v1.setBranch(branch);
+      }
+    });
+
+    // Vertex vSlab2 = vSlab.cloneUnconnected();
+    Edge edge1 = new Edge(vSlab, v1, slabs1);
+    Edge edge2 = new Edge(vSlab, v2, slabs2);
+
+    v1.setBranch(edge1);
+    v2.setBranch(edge2);
+    vSlab.setBranch(edge1);
+    vSlab.setBranch(edge2);
     return new Edge[] {edge1, edge2};
   }
 

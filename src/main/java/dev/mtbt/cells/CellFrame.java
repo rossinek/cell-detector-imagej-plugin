@@ -15,6 +15,8 @@ abstract public class CellFrame {
 
   abstract public void fitPolyline(List<Point2D> polyline);
 
+  abstract public CellFrame clone();
+
   public double getLength() {
     List<Point2D> polyline = this.toPolyline();
     return polyline.stream().skip(1)

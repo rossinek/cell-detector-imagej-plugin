@@ -9,13 +9,17 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.stream.Collectors;
 import dev.mtbt.Utils;
-import ij.ImagePlus;
+import dev.mtbt.imagej.RoiObserver;
+import dev.mtbt.imagej.RoiObserverListener;
+import dev.mtbt.util.Pair;
+import ij.gui.Line;
 import ij.gui.PointRoi;
 import ij.gui.PolygonRoi;
 import ij.gui.Roi;
 import ij.gui.RoiListener;
+import ij.plugin.frame.RoiManager;
 
-public class Cell implements RoiListener {
+public class Cell implements RoiObserverListener {
   private static final String PROPERTY_CELL_FRAME_ID = "cell-frame-id";
 
   private String name = null;
@@ -26,13 +30,18 @@ public class Cell implements RoiListener {
 
   private Cell[] children = new Cell[] {};
 
-  // Hashtable<cellFrameId, roiHashCode>
+  /**
+   * Hashtable<cellFrameId, roiHashCode> where cellFrameId is unique identifier of frame and
+   * roiHashCode is hash that represents PolygonRoi shape and will change each time roi shape
+   * changed
+   */
   private Hashtable<String, Integer> lastRoiHashCodes = new Hashtable<>();
 
   public Cell(int f0, CellFrame first) {
     this.f0 = f0;
     this.frames.add(first);
-    Roi.addRoiListener(this);
+    // Roi.addRoiListener(this);
+    RoiObserver.addListener(this);
   }
 
   public Cell(int f0, CellFrame first, String family) {
@@ -207,25 +216,66 @@ public class Cell implements RoiListener {
   }
 
   @Override
-  public void roiModified(ImagePlus imp, int id) {
-    // TODO: what about DELETED and COMPLETED ?
-    // System.out.println("roiModified: " + id);
-    if (imp == null) {
-      return;
-    }
-    Roi modifiedRoi = imp.getRoi();
-    String cellFrameId = modifiedRoi.getProperty(PROPERTY_CELL_FRAME_ID);
-    if (modifiedRoi != null && modifiedRoi.getType() == Roi.POLYLINE
-        && this.lastRoiHashCodes.containsKey(cellFrameId)
-        && (id == RoiListener.MOVED || id == RoiListener.EXTENDED || id == RoiListener.MODIFIED)) {
-      PolygonRoi modifiedPolygonRoi = (PolygonRoi) modifiedRoi;
-      // System.out.println("Checking that thing... 🕵️‍♂️");
-      int lastRoiHashCode = this.lastRoiHashCodes.get(cellFrameId);
-      if (lastRoiHashCode != this.getPolygonRoiHashCode(modifiedPolygonRoi)) {
-        int index = this.getIndexByCellFrameId(cellFrameId);
-        this.getFrame(index).fitPolyline(Utils.toPolyline(modifiedPolygonRoi.getFloatPolygon()));
+  public void roiModified(Roi modifiedRoi, int id) {
+    if (this.isOwnCellFrameRoi(modifiedRoi)) {
+      if (id == RoiListener.MOVED || id == RoiListener.EXTENDED || id == RoiListener.MODIFIED) {
+        this.cellFrameRoiModified((PolygonRoi) modifiedRoi);
       }
+    } else if (modifiedRoi.getType() == Roi.LINE && id == RoiListener.CREATED
+        && modifiedRoi.getState() == Roi.NORMAL) {
+
+      RoiManager roiManager = RoiManager.getInstance();
+      if (roiManager == null)
+        return;
+      List<PolygonRoi> ownRois =
+          Arrays.asList(roiManager.getRoisAsArray()).stream().filter(this::isOwnCellFrameRoi)
+              .map(roi -> (PolygonRoi) roi).collect(Collectors.toList());
+      this.cellFrameRoisCut(ownRois, (Line) modifiedRoi);
     }
+  }
+
+  private void cellFrameRoiModified(PolygonRoi modifiedRoi) {
+    String cellFrameId = modifiedRoi.getProperty(PROPERTY_CELL_FRAME_ID);
+    int lastRoiHashCode = this.lastRoiHashCodes.get(cellFrameId);
+    if (lastRoiHashCode != this.getPolygonRoiHashCode(modifiedRoi)) {
+      int index = this.getIndexByCellFrameId(cellFrameId);
+      this.getFrame(index).fitPolyline(Utils.toPolyline(modifiedRoi.getFloatPolygon()));
+    }
+  }
+
+  private void cellFrameRoisCut(List<PolygonRoi> roisToCut, Line line) {
+    List<Pair<PolygonRoi, List<Point2D>[]>> changes = new ArrayList<>();
+    Point2D l1 = new Point2D.Double(line.x1d, line.y1d);
+    Point2D l2 = new Point2D.Double(line.x2d, line.y2d);
+    roisToCut.forEach(roi -> {
+      List<Point2D>[] polylines =
+          Utils.cutPolyline(Utils.toPolyline(roi.getFloatPolygon()), l1, l2);
+      if (polylines.length > 1)
+        changes.add(new Pair<>(roi, polylines));
+    });
+    changes.forEach(pair -> {
+      String cellFrameId = pair.getKey().getProperty(PROPERTY_CELL_FRAME_ID);
+      int index = this.getIndexByCellFrameId(cellFrameId);
+
+      // .fitPolyline(pair.getValue()[0])
+      CellFrame cellFrame1 = this.getFrame(index);
+      CellFrame cellFrame2 = cellFrame1.clone();
+      cellFrame1.fitPolyline(pair.getValue()[0]);
+      cellFrame2.fitPolyline(pair.getValue()[1]);
+      Cell c1 = new Cell(index, cellFrame1);
+      Cell c2 = new Cell(index, cellFrame2);
+      this.clearFuture(index);
+      this.setChildren(c1, c2);
+    });
+  }
+
+  private boolean isOwnCellFrameRoi(Roi roi) {
+    if (roi == null) {
+      return false;
+    }
+    String cellFrameId = roi.getProperty(PROPERTY_CELL_FRAME_ID);
+    return cellFrameId != null && roi.getType() == Roi.POLYLINE
+        && this.lastRoiHashCodes.containsKey(cellFrameId);
   }
 
   private int getPolygonRoiHashCode(PolygonRoi roi) {

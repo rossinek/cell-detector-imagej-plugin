@@ -32,6 +32,11 @@ public class PolylineCellFrame extends CellFrame {
     this.assignPolyline(polyline);
   }
 
+  @Override
+  public CellFrame clone() {
+    return new PolylineCellFrame(this.polyline);
+  }
+
   private void assignPolyline(List<Point2D> polyline) {
     this.polyline = new ArrayList<>(polyline);
   }

@@ -5,6 +5,7 @@ import dev.mtbt.util.Pair;
 import ij.process.FloatPolygon;
 import java.util.*;
 import java.awt.Polygon;
+import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 
 public class Utils {
@@ -77,7 +78,9 @@ public class Utils {
   public static ArrayList<Point> simplifyPolyline(List<Point> polyLine, double tolerance) {
     ArrayList<Point> result = simplifyPolylineOneWay(polyLine, tolerance);
     Collections.reverse(result);
-    return simplifyPolylineOneWay(result, tolerance);
+    result = simplifyPolylineOneWay(result, tolerance);
+    Collections.reverse(result);
+    return result;
   }
 
   public static double polylineLength(List<Point2D> polyline) {
@@ -135,5 +138,59 @@ public class Utils {
       points.add(new Point2D.Double(polygon.xpoints[i], polygon.ypoints[i]));
     }
     return points;
+  }
+
+  /**
+   * Returns any point of intersection if exists or null
+   */
+  public static Point2D intersectionPoint(Point2D a1, Point2D b1, Point2D a2, Point2D b2) {
+    double x1 = a1.getX();
+    double y1 = a1.getY();
+    double x2 = b1.getX();
+    double y2 = b1.getY();
+    double x3 = a2.getX();
+    double y3 = a2.getY();
+    double x4 = b2.getX();
+    double y4 = b2.getY();
+
+    if (Line2D.linesIntersect(x1, y1, x2, y2, x3, y3, x4, y4)) {
+      final double x = ((x2 - x1) * (x3 * y4 - x4 * y3) - (x4 - x3) * (x1 * y2 - x2 * y1))
+          / ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+      final double y = ((y3 - y4) * (x1 * y2 - x2 * y1) - (y1 - y2) * (x3 * y4 - x4 * y3))
+          / ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+      return new Point2D.Double(x, y);
+    }
+    return null;
+  }
+
+  public static List<Point2D>[] cutPolyline(List<Point2D> polyline, Point2D line1, Point2D line2) {
+    for (int i = 1; i < polyline.size(); i++) {
+      Point2D p1 = polyline.get(i - 1);
+      Point2D p2 = polyline.get(i);
+      Point2D ip = intersectionPoint(p1, p2, line1, line2);
+      if (ip != null) {
+        if (ip.equals(p1)) {
+          if (i > 1) {
+            List<Point2D> polyline1 = new ArrayList<>(polyline.subList(0, i));
+            List<Point2D> polyline2 = new ArrayList<>(polyline.subList(i, polyline.size()));
+            return new List[] {polyline1, polyline2};
+          }
+        } else if (ip.equals(p2)) {
+          if (i < polyline.size() - 1) {
+            List<Point2D> polyline1 = new ArrayList<>(polyline.subList(0, i + 1));
+            List<Point2D> polyline2 = new ArrayList<>(polyline.subList(i + 1, polyline.size()));
+            return new List[] {polyline1, polyline2};
+          }
+        } else {
+          List<Point2D> polyline1 = new ArrayList<>(polyline.subList(0, i));
+          polyline1.add(ip);
+          List<Point2D> polyline2 = new ArrayList<>(polyline.subList(i + 1, polyline.size()));
+          polyline2.add(0, ip);
+          return new List[] {polyline1, polyline2};
+        }
+        break;
+      }
+    }
+    return new List[] {polyline};
   }
 }
