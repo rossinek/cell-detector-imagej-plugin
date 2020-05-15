@@ -2,6 +2,7 @@ package dev.mtbt.imagej;
 
 import ij.gui.Roi;
 import ij.gui.RoiListener;
+import ij.gui.ShapeRoi;
 import ij.ImageListener;
 import ij.ImagePlus;
 import ij.WindowManager;
@@ -37,7 +38,6 @@ public class RoiObserver {
       for (int id : WindowManager.getIDList()) {
         ImagePlus imp = WindowManager.getImage(id);
         this.imageOpened(imp);
-        // System.out.println("Opened: " + imp.getTitle());
       }
       ImagePlus.addImageListener(this);
       Roi.addRoiListener(this);
@@ -46,12 +46,15 @@ public class RoiObserver {
     @Override
     public void imageOpened(ImagePlus imp) {
       imp.getCanvas().addMouseListener(this);
-      // System.out.println("> IMAGE opened");
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
-      // System.out.println("> Mouse released");
+      // fixes bug in ImageJ:
+      // the only event for Line roi is of type RoiListener.MODIFIED
+      // this code assumes that released mouse after RoiListener.MODIFIED event
+      // for Line roi means that constructing Line has been completed
+      // and sends fake event of type RoiListener.CREATED
       if (this.lastLineRoi != null) {
         RoiObserver.notify(this.lastLineRoi, RoiListener.CREATED);
         this.lastLineRoi = null;
@@ -64,9 +67,9 @@ public class RoiObserver {
         return;
       }
       Roi roi = imp.getRoi();
+      System.out.println("Event: " + roi.getTypeAsString() + " : " + this.roiEventIdAsString(id));
       if (id == RoiListener.MODIFIED) {
         if (roi.getType() == Roi.LINE) {
-          System.out.println("Line mod id: " + id);
           if (id == RoiListener.MODIFIED) {
             this.lastLineRoi = roi;
           }
@@ -109,6 +112,25 @@ public class RoiObserver {
     public void imageUpdated(ImagePlus imp) {
       // ignore
       // System.out.println("> IMAGE updated");
+    }
+
+    private String roiEventIdAsString(int id) {
+      switch (id) {
+        case 1:
+          return "CREATED";
+        case 2:
+          return "MOVED";
+        case 3:
+          return "MODIFIED";
+        case 4:
+          return "EXTENDED";
+        case 5:
+          return "COMPLETED";
+        case 6:
+          return "DELETED";
+        default:
+          return "UNKNOWN";
+      }
     }
   }
 }

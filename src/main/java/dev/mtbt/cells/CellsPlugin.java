@@ -99,6 +99,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
 
   public void preview() {
     this.displayCells();
+    this.imp.updateAndDraw();
   }
 
   private void cleanup() {
@@ -190,6 +191,8 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
       return;
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
+    roiManager.runCommand("show all with labels");
+    roiManager.runCommand("usenames", "true");
     int frame = this.imp.getFrame();
     List<Cell> currentCells = Cell.evolve(this.cells, frame);
     currentCells.stream().forEach(cell -> roiManager.addRoi(cell.getObservedRoi(frame)));
@@ -198,8 +201,6 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
           .forEach(cell -> cell.endsToRois(frame).forEach(roi -> roiManager.addRoi(roi)));
     }
 
-    roiManager.runCommand("show all with labels");
-    roiManager.runCommand("usenames", "true");
   }
 
   @Override
@@ -215,7 +216,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
   @Override
   public void imageUpdated(ImagePlus image) {
     if (image == this.imp) {
-      this.preview();
+      this.displayCells();
     }
   }
 }

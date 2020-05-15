@@ -12,6 +12,7 @@ import dev.mtbt.Utils;
 import dev.mtbt.imagej.RoiObserver;
 import dev.mtbt.imagej.RoiObserverListener;
 import dev.mtbt.util.Pair;
+import ij.ImagePlus;
 import ij.gui.Line;
 import ij.gui.PointRoi;
 import ij.gui.PolygonRoi;
@@ -257,15 +258,21 @@ public class Cell implements RoiObserverListener {
       String cellFrameId = pair.getKey().getProperty(PROPERTY_CELL_FRAME_ID);
       int index = this.getIndexByCellFrameId(cellFrameId);
 
-      // .fitPolyline(pair.getValue()[0])
       CellFrame cellFrame1 = this.getFrame(index);
       CellFrame cellFrame2 = cellFrame1.clone();
       cellFrame1.fitPolyline(pair.getValue()[0]);
       cellFrame2.fitPolyline(pair.getValue()[1]);
       Cell c1 = new Cell(index, cellFrame1);
       Cell c2 = new Cell(index, cellFrame2);
-      this.clearFuture(index);
-      this.setChildren(c1, c2);
+      try {
+        this.clearFuture(index);
+        this.setChildren(c1, c2);
+        // update image to redraw rois
+        line.getImage().updateAndDraw();
+      } catch (Exception e) {
+        /* failed ignore */
+        System.out.println("Failed to cut: " + e.getMessage());
+      }
     });
   }
 
