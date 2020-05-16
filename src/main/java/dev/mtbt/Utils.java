@@ -239,7 +239,7 @@ public class Utils {
       return l1;
     }
     double dist = l1.distance(l2);
-    int n = (int) Math.floor(dist / step);
+    int n = (int) Math.ceil(dist / step);
     // step vector
     double vx = (l2.getX() - l1.getX()) / dist;
     double vy = (l2.getY() - l1.getY()) / dist;

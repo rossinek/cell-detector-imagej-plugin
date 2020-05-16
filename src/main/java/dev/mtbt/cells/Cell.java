@@ -12,7 +12,6 @@ import dev.mtbt.Utils;
 import dev.mtbt.imagej.RoiObserver;
 import dev.mtbt.imagej.RoiObserverListener;
 import dev.mtbt.util.Pair;
-import ij.ImagePlus;
 import ij.gui.Line;
 import ij.gui.PointRoi;
 import ij.gui.PolygonRoi;
@@ -22,7 +21,7 @@ import ij.gui.ShapeRoi;
 import ij.plugin.frame.RoiManager;
 import ij.process.FloatPolygon;
 
-public class Cell implements RoiObserverListener {
+public class Cell extends AbstractCellCollection implements RoiObserverListener {
   private static final String PROPERTY_CELL_FRAME_ID = "cell-frame-id";
 
   private String name = null;
@@ -43,7 +42,6 @@ public class Cell implements RoiObserverListener {
   public Cell(int f0, CellFrame first) {
     this.f0 = f0;
     this.frames.add(first);
-    // Roi.addRoiListener(this);
     RoiObserver.addListener(this);
   }
 
@@ -80,7 +78,7 @@ public class Cell implements RoiObserverListener {
   }
 
   public int getFN() {
-    return this.f0 + this.frames.size() - 1;
+    return this.f0 + this.frames.size();
   }
 
   public ArrayList<CellFrame> getFrames() {
@@ -107,15 +105,17 @@ public class Cell implements RoiObserverListener {
     return this.frames.set(index - this.f0, frame);
   }
 
-  public void clearFuture(int fromIndex) {
+  public void clearFuture(int fromIndex) throws IllegalArgumentException {
     if (fromIndex <= this.getF0()) {
       throw new IllegalArgumentException("fromIndex has to be in the future");
     }
-    if (fromIndex <= this.getFN() + 1) {
-      this.removeChildren();
+    if (fromIndex <= this.getFN()) {
+      System.out.println("Clear frames and children!");
+      this.destroyChildren();
       this.frames.subList(fromIndex - this.f0, this.frames.size()).clear();
     } else {
       for (Cell child : children) {
+        System.out.println("Clear child future!");
         child.clearFuture(fromIndex);
       }
     }
@@ -150,9 +150,11 @@ public class Cell implements RoiObserverListener {
   }
 
   public void setChildren(Cell c1, Cell c2) {
-    if (c1.getF0() != this.getFN() + 1 || c2.getF0() != this.getFN() + 1)
+    if (c1.getF0() != this.getFN() || c2.getF0() != this.getFN())
       throw new IllegalArgumentException();
 
+    c1.setParentCollection(this);
+    c2.setParentCollection(this);
     this.children = new Cell[] {c1, c2};
 
     if (this.name != null) {
@@ -163,7 +165,11 @@ public class Cell implements RoiObserverListener {
     }
   }
 
-  public void removeChildren() {
+  public void destroyChildren() {
+    for (Cell cell : this.children) {
+      cell.setParentCollection(null);
+      cell.destroy();
+    }
     this.children = new Cell[] {};
   }
 
@@ -183,16 +189,12 @@ public class Cell implements RoiObserverListener {
     for (int i = this.f0; i <= index; i++) {
       final int currentIndex = i;
       cells = cells.stream().flatMap(cell -> {
-        if (currentIndex <= cell.getFN())
+        if (currentIndex < cell.getFN())
           return Arrays.stream(new Cell[] {cell});
         return Arrays.stream(cell.getChildren());
       }).collect(Collectors.toList());
     }
     return cells;
-  }
-
-  public static List<Cell> evolve(List<Cell> cells, int index) {
-    return cells.stream().flatMap(cell -> cell.evolve(index).stream()).collect(Collectors.toList());
   }
 
   private String getCellFrameId(int index) {
@@ -228,7 +230,6 @@ public class Cell implements RoiObserverListener {
         && modifiedRoi.getState() == Roi.NORMAL) {
       this.cellFrameRoisCut(this.getOwnActiveRois(), (Line) modifiedRoi);
     } else if (modifiedRoi.getType() == Roi.COMPOSITE && id == RoiListener.CREATED) {
-      System.out.println("modifiedRoi.getType() == Roi.COMPOSITE && id == RoiListener.CREATED");
       this.cellFrameRoisShorten(this.getOwnActiveRois(), (ShapeRoi) modifiedRoi);
     }
   }
@@ -291,8 +292,6 @@ public class Cell implements RoiObserverListener {
       boolean containsEnd =
           shape.containsPoint(fp.xpoints[fp.npoints - 1], fp.ypoints[fp.npoints - 1]);
       if (containsBegin || containsEnd) {
-        System.out.println(">> shorten! <<");
-
         List<Point2D> polyline = Utils.toPolyline(roi.getFloatPolygon());
         List<Point2D> newPolyline =
             Utils.erasePolylineEnd(polyline, shape, containsBegin ? Utils.BEGIN : Utils.END);
@@ -303,13 +302,10 @@ public class Cell implements RoiObserverListener {
 
         if (newPolyline != null && !newPolyline.isEmpty()) {
           cellFrame.fitPolyline(newPolyline);
+        } else if (index > this.getF0()) {
+          this.clearFuture(index);
         } else {
-          if (index > this.getF0()) {
-            this.clearFuture(index);
-          } else {
-            System.out.println("TODO: remove cell");
-            // TODO: delete cell
-          }
+          this.parent.removeFromCollection(this);
         }
         shape.getImage().updateAndDraw();
       }
@@ -330,5 +326,41 @@ public class Cell implements RoiObserverListener {
     Polygon polygon = roi.getPolygon();
     String str = Arrays.toString(polygon.xpoints) + Arrays.toString(polygon.ypoints);
     return str.hashCode();
+  }
+
+  @Override
+  public List<Cell> getCells(int index) {
+    return this.evolve(index);
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return false;
+  }
+
+  @Override
+  public void addToCollection(AbstractCellCollection cellCollection) {
+    throw new IllegalArgumentException("Leaf of tree structure");
+  }
+
+  @Override
+  public void removeFromCollection(AbstractCellCollection cell) {
+    ArrayList<CellFrame> framesToPreserve;
+    if (this.children[0] == cell) {
+      framesToPreserve = children[1].frames;
+    } else if (this.children[1] == cell) {
+      framesToPreserve = children[0].frames;
+    } else {
+      throw new IllegalArgumentException();
+    }
+    this.frames.addAll(framesToPreserve);
+    this.destroyChildren();
+  }
+
+  @Override
+  public void destroy() {
+    super.destroy();
+    this.destroyChildren();
+    RoiObserver.removeListener(this);
   }
 }

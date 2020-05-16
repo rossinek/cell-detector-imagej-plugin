@@ -3,6 +3,7 @@ package dev.mtbt.cells.skeleton;
 import dev.mtbt.ImageJUtils;
 import dev.mtbt.Utils;
 import dev.mtbt.cells.Cell;
+import dev.mtbt.cells.CellCollection;
 import dev.mtbt.cells.CellFrame;
 import dev.mtbt.cells.ICellLifeTracker;
 import dev.mtbt.gui.RunnableButton;
@@ -34,20 +35,20 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
   private RunnableSpinner nFramesSlider;
 
   @Parameter(type = ItemIO.OUTPUT)
-  private List<Cell> cells = null;
+  private CellCollection cellCollection = null;
 
   CompletableFuture<Void> result = new CompletableFuture<>();
 
   @Override
-  public void init(List<Cell> cells) {
-    this.cells = cells;
+  public void init(CellCollection cellCollection) {
+    this.cellCollection = cellCollection;
     this.run();
     this.showFirstFrameWithCells();
   }
 
   @Override
   public void run() {
-    if (this.cells == null || !super.initComponents()) {
+    if (this.cellCollection == null || !super.initComponents()) {
       return;
     }
 
@@ -66,10 +67,10 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
 
   public void preview() {
     super.preview();
-    if (this.cells != null) {
+    if (this.cellCollection != null) {
       RoiManager roiManager = ImageJUtils.getRoiManager();
       roiManager.reset();
-      Cell.evolve(this.cells, (int) this.frameSlider.getValue()).stream()
+      this.cellCollection.getCells((int) this.frameSlider.getValue()).stream()
           .map(cell -> cell.getObservedRoi((int) this.frameSlider.getValue()))
           .filter(roi -> roi != null).forEach(roi -> roiManager.addRoi(roi));
       roiManager.runCommand("show all");
@@ -82,25 +83,24 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
   }
 
   protected void showFirstFrameWithCells() {
-    int frame = this.cells.isEmpty() ? 1
-        : this.cells.stream().map(c -> c.getF0()).reduce(this.cells.get(0).getF0(), Integer::min);
+    int frame = this.cellCollection.isEmpty() ? 1 : this.cellCollection.getF0();
     this.frameSlider.getModel().setValue(frame);
   }
 
   protected void onRunClick() {
-    if (this.cells == null) {
+    if (this.cellCollection == null) {
       this.uiService.showDialog("There are no cells to track");
       return;
     }
     int f0 = (int) this.frameSlider.getValue();
-    List<Cell> cells = Cell.evolve(this.cells, f0);
+    List<Cell> cells = this.cellCollection.getCells(f0);
     if (cells.size() < 1) {
       this.uiService.showDialog("There are no cells to in current frame");
       return;
     }
     cells.forEach(cell -> cell.clearFuture(f0 + 1));
     for (int index = f0 + 1; index <= f0 + (int) this.nFramesSlider.getValue(); index++) {
-      cells = Cell.evolve(cells, index - 1);
+      cells = this.cellCollection.getCells(index - 1);
       final int frameIndex = index;
       this.frameSlider.setValue(frameIndex);
       this.preview();

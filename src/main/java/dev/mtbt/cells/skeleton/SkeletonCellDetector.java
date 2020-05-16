@@ -15,6 +15,7 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import dev.mtbt.ImageJUtils;
 import dev.mtbt.cells.Cell;
+import dev.mtbt.cells.CellCollection;
 import dev.mtbt.cells.ICellDetector;
 import dev.mtbt.gui.RunnableButton;
 import ij.gui.PolygonRoi;
@@ -29,9 +30,9 @@ public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetecto
   private RunnableButton runButton;
 
   @Parameter(type = ItemIO.OUTPUT)
-  private List<Cell> cells = new ArrayList<>();
+  private CellCollection cellCollection = new CellCollection();
 
-  CompletableFuture<List<Cell>> result = new CompletableFuture<>();
+  CompletableFuture<CellCollection> result = new CompletableFuture<>();
 
   @Override
   public void run() {
@@ -58,7 +59,7 @@ public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetecto
   }
 
   @Override
-  public Future<List<Cell>> output() {
+  public Future<CellCollection> output() {
     return this.result;
   }
 
@@ -73,7 +74,7 @@ public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetecto
     if (this.impPreview != null) {
       this.impPreview.deleteRoi();
     }
-    this.cells.clear();
+    this.cellCollection = new CellCollection();
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
     roiManager.runCommand("show all");
@@ -87,22 +88,23 @@ public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetecto
     }
 
     List<Spine> spines = this.performSearch(this.collectSelectedPoints());
+    int f0 = (int) this.frameSlider.getValue();
     for (int index = 0; index < spines.size(); index++) {
       char character = (char) ('A' + index);
-      cells.add(new Cell((int) this.frameSlider.getValue(),
-          this.spineToCellFrame(spines.get(index)), "" + character));
+      this.cellCollection
+          .addToCollection(new Cell(f0, this.spineToCellFrame(spines.get(index)), "" + character));
     }
 
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
-    cells
+    cellCollection.getCells(f0)
         .forEach(cell -> roiManager.addRoi(cell.getObservedRoi((int) this.frameSlider.getValue())));
     roiManager.runCommand("show all");
   }
 
   protected void done() {
     super.done();
-    result.complete(this.cells);
+    result.complete(this.cellCollection);
   }
 
   private List<Point> collectSelectedPoints() {

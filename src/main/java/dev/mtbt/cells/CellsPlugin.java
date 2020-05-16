@@ -35,7 +35,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
   private UIService uiService;
 
   private DialogStepper dialog;
-  private List<Cell> cells;
+  private CellCollection cellCollection;
 
   private JComboBox<String> detectorSelect;
   final String[] detectorOptions = {"SkeletonCellDetector"};
@@ -104,9 +104,9 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
 
   private void cleanup() {
     ImagePlus.removeImageListener(this);
-    if (this.cells == null)
+    if (this.cellCollection == null)
       return;
-    this.cells = null;
+    this.cellCollection = null;
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
   }
@@ -130,7 +130,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
             uiService.showDialog("No such detector");
             return;
         }
-        this.cells = cellDetector.output().get();
+        this.cellCollection = cellDetector.output().get();
         this.onDetectionEnd();
       } catch (Exception e) {
         e.printStackTrace();
@@ -158,7 +158,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
             uiService.showDialog("No such life tracker");
             return;
         }
-        cellLifeTracker.init(this.cells);
+        cellLifeTracker.init(this.cellCollection);
         cellLifeTracker.output().get();
         this.onLifeTrackingEnd();
       } catch (Exception e) {
@@ -169,8 +169,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
   }
 
   protected void showFirstFrameWithCells() {
-    int frame = this.cells.isEmpty() ? 1
-        : this.cells.stream().map(c -> c.getF0()).reduce(this.cells.get(0).getF0(), Integer::min);
+    int frame = this.cellCollection.isEmpty() ? 1 : this.cellCollection.getF0();
     this.imp.setT(frame);
   }
 
@@ -187,14 +186,14 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
   }
 
   private void displayCells() {
-    if (this.cells == null)
+    if (this.cellCollection == null)
       return;
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
     roiManager.runCommand("show all with labels");
     roiManager.runCommand("usenames", "true");
     int frame = this.imp.getFrame();
-    List<Cell> currentCells = Cell.evolve(this.cells, frame);
+    List<Cell> currentCells = cellCollection.getCells(frame);
     currentCells.stream().forEach(cell -> roiManager.addRoi(cell.getObservedRoi(frame)));
     if (this.showEndpointsCheckBox.isSelected()) {
       currentCells.stream()
