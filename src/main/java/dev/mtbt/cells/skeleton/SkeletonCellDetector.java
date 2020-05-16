@@ -74,6 +74,9 @@ public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetecto
     if (this.impPreview != null) {
       this.impPreview.deleteRoi();
     }
+    if (this.cellCollection != null) {
+      this.cellCollection.destroy();
+    }
     this.cellCollection = new CellCollection();
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();

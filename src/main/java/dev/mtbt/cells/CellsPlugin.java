@@ -106,6 +106,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
     ImagePlus.removeImageListener(this);
     if (this.cellCollection == null)
       return;
+    this.cellCollection.destroy();
     this.cellCollection = null;
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
@@ -129,6 +130,9 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
           default:
             uiService.showDialog("No such detector");
             return;
+        }
+        if (this.cellCollection != null) {
+          this.cellCollection.destroy();
         }
         this.cellCollection = cellDetector.output().get();
         this.onDetectionEnd();
