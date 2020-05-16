@@ -2,13 +2,18 @@ package dev.mtbt;
 
 import dev.mtbt.graph.*;
 import dev.mtbt.util.Pair;
+import ij.gui.ShapeRoi;
 import ij.process.FloatPolygon;
 import java.util.*;
+import java.util.function.Predicate;
 import java.awt.Polygon;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 
 public class Utils {
+  public final static int BEGIN = 0;
+  public final static int END = 1;
+
   public static double distance(Point p0, Point p1) {
     return Math.sqrt(((p0.x - p1.x) * (p0.x - p1.x) + (p0.y - p1.y) * (p0.y - p1.y)));
   }
@@ -192,5 +197,61 @@ public class Utils {
       }
     }
     return new List[] {polyline};
+  }
+
+  public static List<Point2D> erasePolylineEnd(List<Point2D> oldPolyline, ShapeRoi shape,
+      int beginOrEnd) {
+
+    List<Point2D> newPolyline = new ArrayList<>(oldPolyline);
+    if (beginOrEnd == BEGIN) {
+      Collections.reverse(newPolyline);
+    }
+
+    int index;
+    for (index = newPolyline.size() - 1; index >= 0 && shape
+        .containsPoint(newPolyline.get(index).getX(), newPolyline.get(index).getY()); index--);
+
+    if (index == newPolyline.size() - 1) {
+      return newPolyline;
+    }
+
+    Point2D lastRemovedPoint = newPolyline.get(index + 1);
+    newPolyline.subList(index + 1, newPolyline.size()).clear();
+
+    if (index >= 0) {
+      int ACCURACY = 2;
+      Point2D newEnd = findSamplePointOnLine(lastRemovedPoint, newPolyline.get(index), ACCURACY,
+          point -> !shape.containsPoint(point.getX(), point.getY()));
+      if (newEnd != null && newEnd.distance(newPolyline.get(index)) > ACCURACY) {
+        newPolyline.add(newEnd);
+      }
+    }
+
+    if (beginOrEnd == BEGIN) {
+      Collections.reverse(newPolyline);
+    }
+    return newPolyline;
+  }
+
+  public static Point2D findSamplePointOnLine(Point2D l1, Point2D l2, double step,
+      Predicate<Point2D> predicate) {
+    if (predicate.test(l1)) {
+      return l1;
+    }
+    double dist = l1.distance(l2);
+    int n = (int) Math.floor(dist / step);
+    // step vector
+    double vx = (l2.getX() - l1.getX()) / dist;
+    double vy = (l2.getY() - l1.getY()) / dist;
+    for (int i = 1; i < n; i++) {
+      Point2D sample = new Point2D.Double(l1.getX() + vx * i, l1.getY() + vy * i);
+      if (predicate.test(sample)) {
+        return sample;
+      }
+    }
+    if (predicate.test(l2)) {
+      return l2;
+    }
+    return null;
   }
 }

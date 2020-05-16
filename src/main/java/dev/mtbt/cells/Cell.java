@@ -18,7 +18,9 @@ import ij.gui.PointRoi;
 import ij.gui.PolygonRoi;
 import ij.gui.Roi;
 import ij.gui.RoiListener;
+import ij.gui.ShapeRoi;
 import ij.plugin.frame.RoiManager;
+import ij.process.FloatPolygon;
 
 public class Cell implements RoiObserverListener {
   private static final String PROPERTY_CELL_FRAME_ID = "cell-frame-id";
@@ -224,15 +226,19 @@ public class Cell implements RoiObserverListener {
       }
     } else if (modifiedRoi.getType() == Roi.LINE && id == RoiListener.CREATED
         && modifiedRoi.getState() == Roi.NORMAL) {
-
-      RoiManager roiManager = RoiManager.getInstance();
-      if (roiManager == null)
-        return;
-      List<PolygonRoi> ownRois =
-          Arrays.asList(roiManager.getRoisAsArray()).stream().filter(this::isOwnCellFrameRoi)
-              .map(roi -> (PolygonRoi) roi).collect(Collectors.toList());
-      this.cellFrameRoisCut(ownRois, (Line) modifiedRoi);
+      this.cellFrameRoisCut(this.getOwnActiveRois(), (Line) modifiedRoi);
+    } else if (modifiedRoi.getType() == Roi.COMPOSITE && id == RoiListener.CREATED) {
+      System.out.println("modifiedRoi.getType() == Roi.COMPOSITE && id == RoiListener.CREATED");
+      this.cellFrameRoisShorten(this.getOwnActiveRois(), (ShapeRoi) modifiedRoi);
     }
+  }
+
+  private List<PolygonRoi> getOwnActiveRois() {
+    RoiManager roiManager = RoiManager.getInstance();
+    if (roiManager == null)
+      return new ArrayList<>();
+    return Arrays.asList(roiManager.getRoisAsArray()).stream().filter(this::isOwnCellFrameRoi)
+        .map(roi -> (PolygonRoi) roi).collect(Collectors.toList());
   }
 
   private void cellFrameRoiModified(PolygonRoi modifiedRoi) {
@@ -269,11 +275,46 @@ public class Cell implements RoiObserverListener {
         this.setChildren(c1, c2);
         // update image to redraw rois
         line.getImage().updateAndDraw();
-      } catch (Exception e) {
-        /* failed ignore */
+      } catch (IllegalArgumentException e) {
+        // can't cut first frame of cell
+        // parent cell can't have more than 2 children
+        // ignore failure
         System.out.println("Failed to cut: " + e.getMessage());
       }
     });
+  }
+
+  private void cellFrameRoisShorten(List<PolygonRoi> roisToShorten, ShapeRoi shape) {
+    roisToShorten.forEach(roi -> {
+      FloatPolygon fp = roi.getFloatPolygon();
+      boolean containsBegin = shape.containsPoint(fp.xpoints[0], fp.ypoints[0]);
+      boolean containsEnd =
+          shape.containsPoint(fp.xpoints[fp.npoints - 1], fp.ypoints[fp.npoints - 1]);
+      if (containsBegin || containsEnd) {
+        System.out.println(">> shorten! <<");
+
+        List<Point2D> polyline = Utils.toPolyline(roi.getFloatPolygon());
+        List<Point2D> newPolyline =
+            Utils.erasePolylineEnd(polyline, shape, containsBegin ? Utils.BEGIN : Utils.END);
+
+        String cellFrameId = roi.getProperty(PROPERTY_CELL_FRAME_ID);
+        int index = this.getIndexByCellFrameId(cellFrameId);
+        CellFrame cellFrame = this.getFrame(index);
+
+        if (newPolyline != null && !newPolyline.isEmpty()) {
+          cellFrame.fitPolyline(newPolyline);
+        } else {
+          if (index > this.getF0()) {
+            this.clearFuture(index);
+          } else {
+            System.out.println("TODO: remove cell");
+            // TODO: delete cell
+          }
+        }
+        shape.getImage().updateAndDraw();
+      }
+    });
+
   }
 
   private boolean isOwnCellFrameRoi(Roi roi) {

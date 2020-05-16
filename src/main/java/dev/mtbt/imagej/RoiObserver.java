@@ -33,6 +33,7 @@ public class RoiObserver {
 
   static private class EventsListener implements RoiListener, MouseListener, ImageListener {
     private Roi lastLineRoi;
+    private Roi lastShapeRoi;
 
     public EventsListener() {
       for (int id : WindowManager.getIDList()) {
@@ -59,6 +60,10 @@ public class RoiObserver {
         RoiObserver.notify(this.lastLineRoi, RoiListener.CREATED);
         this.lastLineRoi = null;
       }
+      if (this.lastShapeRoi != null) {
+        RoiObserver.notify(this.lastShapeRoi, RoiListener.CREATED);
+        this.lastShapeRoi = null;
+      }
     }
 
     @Override
@@ -67,7 +72,8 @@ public class RoiObserver {
         return;
       }
       Roi roi = imp.getRoi();
-      System.out.println("Event: " + roi.getTypeAsString() + " : " + this.roiEventIdAsString(id));
+      // System.out.println("Event: " + roi.getTypeAsString() + " : " +
+      // this.roiEventIdAsString(id));
       if (id == RoiListener.MODIFIED) {
         if (roi.getType() == Roi.LINE) {
           if (id == RoiListener.MODIFIED) {
@@ -76,6 +82,9 @@ public class RoiObserver {
         } else {
           RoiObserver.notify(roi, id);
         }
+      }
+      if (roi.getType() == Roi.COMPOSITE && id == RoiListener.CREATED) {
+        this.lastShapeRoi = roi;
       }
     }
 
