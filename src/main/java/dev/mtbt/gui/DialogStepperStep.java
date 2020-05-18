@@ -7,11 +7,18 @@ public class DialogStepperStep {
   private String name;
   private Component component;
   private boolean finished = false;
+  private Runnable onActivated = null;
 
   public DialogStepperStep(DialogStepper dialog, String name, Component component) {
     this.dialog = dialog;
     this.component = component;
     this.name = name;
+  }
+
+  public DialogStepperStep(DialogStepper dialog, String name, Component component,
+      Runnable onActivated) {
+    this(dialog, name, component);
+    this.onActivated = onActivated;
   }
 
   public String getName() {
@@ -29,5 +36,11 @@ public class DialogStepperStep {
 
   public boolean isFinished() {
     return this.finished;
+  }
+
+  public void activate() {
+    if (this.onActivated != null) {
+      this.onActivated.run();
+    }
   }
 }

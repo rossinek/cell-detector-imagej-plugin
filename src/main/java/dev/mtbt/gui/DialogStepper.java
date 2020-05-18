@@ -13,6 +13,7 @@ import javax.swing.border.EmptyBorder;
 
 public class DialogStepper extends JFrame implements ActionListener {
   private JPanel cardPanel;
+  private String currentStepName;
 
   private JButton backButton;
   private JButton nextButton;
@@ -127,6 +128,10 @@ public class DialogStepper extends JFrame implements ActionListener {
     CardLayout cardLayout = (CardLayout) (this.cardPanel.getLayout());
     DialogStepperStep step = this.getCurrentStep();
     cardLayout.show(this.cardPanel, step.getName());
+    if (this.currentStepName != step.getName()) {
+      this.currentStepName = step.getName();
+      step.activate();
+    }
     this.backButton.setEnabled(this.isPreviousEnabled());
     this.nextButton.setEnabled(this.isNextEnabled());
     if (stepIndex == this.steps.size() - 1) {

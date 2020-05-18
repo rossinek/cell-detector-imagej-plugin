@@ -43,7 +43,10 @@ public class CellCollection extends AbstractCellCollection {
     if (index <= this.getF0()) {
       throw new IllegalArgumentException("fromIndex has to be in the future");
     }
-    this.subCollections.stream().filter(c -> c.getF0() >= index).forEach(c -> c.destroy());
+    // destroy and remove from collections all cells that starts at or after `index`
+    this.subCollections.stream().filter(c -> c.getF0() >= index).collect(Collectors.toList())
+        .forEach(c -> c.destroy());
+    // rest of sub collections starts before `index`
     this.subCollections.forEach(cell -> cell.clearFuture(index));
   }
 
@@ -56,8 +59,11 @@ public class CellCollection extends AbstractCellCollection {
   @Override
   public void destroy() {
     super.destroy();
-    for (AbstractCellCollection collection : this.subCollections) {
-      collection.destroy();
-    }
+    new ArrayList<>(this.subCollections).forEach(c -> c.destroy());
+  }
+
+  public List<Cell> getAllRootCells() {
+    return this.subCollections.stream().flatMap(cell -> cell.getCells(cell.getF0()).stream())
+        .collect(Collectors.toList());
   }
 }

@@ -12,6 +12,7 @@ import dev.mtbt.Utils;
 import dev.mtbt.imagej.RoiObserver;
 import dev.mtbt.imagej.RoiObserverListener;
 import dev.mtbt.util.Pair;
+import ij.IJ;
 import ij.gui.Line;
 import ij.gui.PointRoi;
 import ij.gui.PolygonRoi;
@@ -110,12 +111,10 @@ public class Cell extends AbstractCellCollection implements RoiObserverListener 
       throw new IllegalArgumentException("fromIndex has to be in the future");
     }
     if (fromIndex <= this.getFN()) {
-      System.out.println("Clear frames and children!");
       this.destroyChildren();
       this.frames.subList(fromIndex - this.f0, this.frames.size()).clear();
     } else {
       for (Cell child : children) {
-        System.out.println("Clear child future!");
         child.clearFuture(fromIndex);
       }
     }
@@ -265,22 +264,20 @@ public class Cell extends AbstractCellCollection implements RoiObserverListener 
       String cellFrameId = pair.getKey().getProperty(PROPERTY_CELL_FRAME_ID);
       int index = this.getIndexByCellFrameId(cellFrameId);
 
-      CellFrame cellFrame1 = this.getFrame(index);
-      CellFrame cellFrame2 = cellFrame1.clone();
-      cellFrame1.fitPolyline(pair.getValue()[0]);
-      cellFrame2.fitPolyline(pair.getValue()[1]);
-      Cell c1 = new Cell(index, cellFrame1);
-      Cell c2 = new Cell(index, cellFrame2);
-      try {
+      if (index > this.getF0()) {
+        CellFrame cellFrame1 = this.getFrame(index);
+        CellFrame cellFrame2 = cellFrame1.clone();
+        cellFrame1.fitPolyline(pair.getValue()[0]);
+        cellFrame2.fitPolyline(pair.getValue()[1]);
+        Cell c1 = new Cell(index, cellFrame1);
+        Cell c2 = new Cell(index, cellFrame2);
         this.clearFuture(index);
         this.setChildren(c1, c2);
         // update image to redraw rois
         line.getImage().updateAndDraw();
-      } catch (IllegalArgumentException e) {
-        // can't cut first frame of cell
-        // parent cell can't have more than 2 children
-        // ignore failure
-        System.out.println("Failed to cut: " + e.getMessage());
+      } else {
+        IJ.showMessage(
+            "Can't cut first frame of cell, parent cell would have more than 2 children.");
       }
     });
   }

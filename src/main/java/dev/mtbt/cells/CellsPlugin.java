@@ -2,13 +2,17 @@ package dev.mtbt.cells;
 
 import ij.ImageListener;
 import ij.ImagePlus;
+import ij.gui.Plot;
+import ij.measure.ResultsTable;
 import ij.plugin.frame.RoiManager;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
+import java.util.stream.IntStream;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
 import javax.swing.JPanel;
 import org.scijava.command.Command;
@@ -47,6 +51,8 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
 
   private RunnableCheckBox showEndpointsCheckBox;
 
+  private JComboBox<String> measurementsCellNameSelect;
+
   @Override
   public void run() {
     ImagePlus.addImageListener(this);
@@ -73,10 +79,28 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
     lifeTrackerButton.setAlignmentX(Component.CENTER_ALIGNMENT);
     cardLifeTracking.add(lifeTrackerButton);
 
+    JPanel cardMeasurements = new JPanel();
+    cardMeasurements.setLayout(new BoxLayout(cardMeasurements, BoxLayout.Y_AXIS));
+    measurementsCellNameSelect = new JComboBox<>();
+    measurementsCellNameSelect.setAlignmentX(Component.CENTER_ALIGNMENT);
+    cardMeasurements.add(measurementsCellNameSelect);
+    RunnableButton measureLengthsButton =
+        new RunnableButton("Measure lengths", this::showLengthsTable);
+    measureLengthsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+    cardMeasurements.add(measureLengthsButton);
+    RunnableButton plotLengthsButton = new RunnableButton("Plot lengths", this::plotLengths);
+    plotLengthsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+    cardMeasurements.add(plotLengthsButton);
+
     this.dialog =
         new DialogStepper("Main plugin window", this.createSettingsComponent(), this::cleanup);
     this.dialog.registerStep(new DialogStepperStep(dialog, "Detection", cardDetection));
     this.dialog.registerStep(new DialogStepperStep(dialog, "LifeTracking", cardLifeTracking));
+    this.dialog.registerStep(new DialogStepperStep(dialog, "Measurements", cardMeasurements, () -> {
+      List<String> cells = CellAnalyzer.getAllGenerationsNames(this.cellCollection);
+      this.measurementsCellNameSelect
+          .setModel(new DefaultComboBoxModel<>(cells.toArray(new String[cells.size()])));
+    }));
     this.dialog.setVisible(true);
   }
 
@@ -170,6 +194,34 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
       }
     });
     t.start();
+  }
+
+  protected void showLengthsTable() {
+    String cellName = (String) this.measurementsCellNameSelect.getSelectedItem();
+    Cell cell = CellAnalyzer.getCellByName(this.cellCollection, cellName);
+    this.measureLengths(cell).show("Lengths table");
+  }
+
+  protected ResultsTable measureLengths(Cell cell) {
+    ResultsTable table = new ResultsTable();
+    for (CellFrame frame : cell.getFrames()) {
+      table.incrementCounter();
+      table.addValue("Length", frame.getLength());
+    }
+    return table;
+  }
+
+  protected void plotLengths() {
+    String cellName = (String) this.measurementsCellNameSelect.getSelectedItem();
+    Cell cell = CellAnalyzer.getCellByName(this.cellCollection, cellName);
+    ResultsTable table = this.measureLengths(cell);
+
+    table.getColumnAsDoubles(0);
+    double[] frames =
+        IntStream.range(cell.getF0(), cell.getFN()).mapToDouble(i -> (double) i).toArray();
+    Plot plot = new Plot("Length plot", "Frame index", "Length");
+    plot.add("Length", frames, table.getColumnAsDoubles(0));
+    plot.show();
   }
 
   protected void showFirstFrameWithCells() {
