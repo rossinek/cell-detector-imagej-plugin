@@ -23,9 +23,7 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import javax.swing.Box;
 import javax.swing.JLabel;
-import org.scijava.ItemIO;
 import org.scijava.command.Command;
-import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
 @Plugin(type = Command.class, menuPath = "Development>Skeleton>Cell Life Tracker")
@@ -34,7 +32,6 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
   private RunnableButton runButton;
   private RunnableSpinner nFramesSlider;
 
-  @Parameter(type = ItemIO.OUTPUT)
   private CellCollection cellCollection = null;
 
   CompletableFuture<Void> result = new CompletableFuture<>();

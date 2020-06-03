@@ -9,9 +9,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import javax.swing.Box;
 import javax.swing.JPanel;
-import org.scijava.ItemIO;
 import org.scijava.command.Command;
-import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import dev.mtbt.ImageJUtils;
 import dev.mtbt.cells.Cell;
@@ -29,7 +27,6 @@ public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetecto
   private RunnableButton clearSelectedCellsButton;
   private RunnableButton runButton;
 
-  @Parameter(type = ItemIO.OUTPUT)
   private CellCollection cellCollection = new CellCollection();
 
   CompletableFuture<CellCollection> result = new CompletableFuture<>();
