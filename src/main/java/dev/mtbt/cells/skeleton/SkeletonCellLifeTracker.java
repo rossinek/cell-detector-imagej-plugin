@@ -9,6 +9,8 @@ import dev.mtbt.cells.ICellLifeTracker;
 import dev.mtbt.gui.RunnableButton;
 import dev.mtbt.gui.RunnableSpinner;
 import dev.mtbt.util.Pair;
+import ij.ImageListener;
+import ij.ImagePlus;
 import ij.plugin.frame.RoiManager;
 
 import java.awt.Point;
@@ -27,7 +29,8 @@ import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
 
 @Plugin(type = Command.class, menuPath = "Development>Skeleton>Cell Life Tracker")
-public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLifeTracker {
+public class SkeletonCellLifeTracker extends SkeletonPlugin
+    implements ICellLifeTracker, ImageListener {
 
   private RunnableButton runButton;
   private RunnableSpinner nFramesSlider;
@@ -38,6 +41,7 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
 
   @Override
   public void init(CellCollection cellCollection) {
+    ImagePlus.addImageListener(this);
     this.cellCollection = cellCollection;
     this.run();
     this.showFirstFrameWithCells();
@@ -64,14 +68,7 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
 
   public void preview() {
     super.preview();
-    if (this.cellCollection != null) {
-      RoiManager roiManager = ImageJUtils.getRoiManager();
-      roiManager.reset();
-      this.cellCollection.getCells((int) this.frameSlider.getValue()).stream()
-          .map(cell -> cell.getObservedRoi((int) this.frameSlider.getValue()))
-          .filter(roi -> roi != null).forEach(roi -> roiManager.addRoi(roi));
-      roiManager.runCommand("show all");
-    }
+    this.updateAndDrawCells();
   }
 
   @Override
@@ -213,5 +210,33 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
   protected void done() {
     super.done();
     result.complete(null);
+  }
+
+  protected void updateAndDrawCells() {
+    if (this.cellCollection != null) {
+      RoiManager roiManager = ImageJUtils.getRoiManager();
+      roiManager.reset();
+      this.cellCollection.getCells((int) this.frameSlider.getValue()).stream()
+          .map(cell -> cell.getObservedRoi((int) this.frameSlider.getValue()))
+          .filter(roi -> roi != null).forEach(roi -> roiManager.addRoi(roi));
+      roiManager.runCommand("show all");
+    }
+  }
+
+  @Override
+  public void imageOpened(ImagePlus imp) {
+    // Ignore
+  }
+
+  @Override
+  public void imageClosed(ImagePlus imp) {
+    // Ignore
+  }
+
+  @Override
+  public void imageUpdated(ImagePlus image) {
+    if (image == this.impPreview) {
+      this.updateAndDrawCells();
+    }
   }
 }
