@@ -11,14 +11,12 @@ import javax.swing.Box;
 import javax.swing.JPanel;
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
-import dev.mtbt.ImageJUtils;
 import dev.mtbt.cells.Cell;
 import dev.mtbt.cells.CellCollection;
 import dev.mtbt.cells.ICellDetector;
 import dev.mtbt.gui.RunnableButton;
 import ij.gui.PolygonRoi;
 import ij.gui.Toolbar;
-import ij.plugin.frame.RoiManager;
 
 @Plugin(type = Command.class, menuPath = "Development>Skeleton>Cell Detector")
 public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetector {
@@ -27,8 +25,6 @@ public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetecto
   private RunnableButton clearSelectedCellsButton;
   private RunnableButton runButton;
 
-  private CellCollection cellCollection = new CellCollection();
-
   CompletableFuture<CellCollection> result = new CompletableFuture<>();
 
   @Override
@@ -36,6 +32,7 @@ public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetecto
     if (!super.initComponents()) {
       return;
     }
+    this.cellCollection = new CellCollection();
 
     JPanel buttonsPanel = new JPanel();
     buttonsPanel.setLayout(new FlowLayout());
@@ -61,45 +58,40 @@ public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetecto
   }
 
   protected void onSelectCellsClick() {
-    if (this.impPreview != null) {
-      this.impPreview.deleteRoi();
+    if (this.impPreviewStack != null) {
+      this.impPreviewStack.deleteRoi();
     }
     Toolbar.getInstance().setTool(Toolbar.POINT);
   }
 
   protected void onResetClick() {
-    if (this.impPreview != null) {
-      this.impPreview.deleteRoi();
+    if (this.impPreviewStack != null) {
+      this.impPreviewStack.deleteRoi();
     }
     if (this.cellCollection != null) {
       this.cellCollection.destroy();
     }
     this.cellCollection = new CellCollection();
-    RoiManager roiManager = ImageJUtils.getRoiManager();
-    roiManager.reset();
-    roiManager.runCommand("show all");
+    this.updateAndDrawCells();
   }
 
   protected void onRunClick() {
-    PolygonRoi roi = this.impPreview != null ? (PolygonRoi) this.impPreview.getRoi() : null;
+    PolygonRoi roi =
+        this.impPreviewStack != null ? (PolygonRoi) this.impPreviewStack.getRoi() : null;
     if (roi == null) {
       this.uiService.showDialog("There are no points selected.");
       return;
     }
 
     List<Spine> spines = this.performSearch(this.collectSelectedPoints());
-    int f0 = (int) this.frameSlider.getValue();
+    int f0 = this.impPreviewStack.getT();
     for (int index = 0; index < spines.size(); index++) {
       char character = (char) ('A' + index);
       this.cellCollection
           .addToCollection(new Cell(f0, this.spineToCellFrame(spines.get(index)), "" + character));
     }
 
-    RoiManager roiManager = ImageJUtils.getRoiManager();
-    roiManager.reset();
-    cellCollection.getCells(f0)
-        .forEach(cell -> roiManager.addRoi(cell.getObservedRoi((int) this.frameSlider.getValue())));
-    roiManager.runCommand("show all");
+    this.updateAndDrawCells();
   }
 
   protected void done() {
@@ -109,7 +101,8 @@ public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetecto
 
   private List<Point> collectSelectedPoints() {
     ArrayList<Point> points = new ArrayList<>();
-    PolygonRoi roi = this.impPreview != null ? (PolygonRoi) this.impPreview.getRoi() : null;
+    PolygonRoi roi =
+        this.impPreviewStack != null ? (PolygonRoi) this.impPreviewStack.getRoi() : null;
     if (roi != null) {
       int[] xPoints = roi.getPolygon().xpoints;
       int[] yPoints = roi.getPolygon().ypoints;

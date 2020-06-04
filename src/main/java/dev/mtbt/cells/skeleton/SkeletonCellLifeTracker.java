@@ -9,8 +9,6 @@ import dev.mtbt.cells.ICellLifeTracker;
 import dev.mtbt.gui.RunnableButton;
 import dev.mtbt.gui.RunnableSpinner;
 import dev.mtbt.util.Pair;
-import ij.ImageListener;
-import ij.ImagePlus;
 import ij.plugin.frame.RoiManager;
 
 import java.awt.Point;
@@ -29,19 +27,15 @@ import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
 
 @Plugin(type = Command.class, menuPath = "Development>Skeleton>Cell Life Tracker")
-public class SkeletonCellLifeTracker extends SkeletonPlugin
-    implements ICellLifeTracker, ImageListener {
+public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLifeTracker {
 
   private RunnableButton runButton;
   private RunnableSpinner nFramesSlider;
-
-  private CellCollection cellCollection = null;
 
   CompletableFuture<Void> result = new CompletableFuture<>();
 
   @Override
   public void init(CellCollection cellCollection) {
-    ImagePlus.addImageListener(this);
     this.cellCollection = cellCollection;
     this.run();
     this.showFirstFrameWithCells();
@@ -66,10 +60,10 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin
     this.preview();
   }
 
-  public void preview() {
-    super.preview();
-    this.updateAndDrawCells();
-  }
+  // public void preview() {
+  // super.preview();
+  // this.updateAndDrawCells();
+  // }
 
   @Override
   public Future<Void> output() {
@@ -78,7 +72,8 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin
 
   protected void showFirstFrameWithCells() {
     int frame = this.cellCollection.isEmpty() ? 1 : this.cellCollection.getF0();
-    this.frameSlider.getModel().setValue(frame);
+    this.impPreviewStack.setT(frame);
+    // this.frameSlider.getModel().setValue(frame);
   }
 
   protected void onRunClick() {
@@ -86,7 +81,7 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin
       this.uiService.showDialog("There are no cells to track");
       return;
     }
-    int f0 = (int) this.frameSlider.getValue();
+    int f0 = this.impPreviewStack.getT();
     List<Cell> cells = this.cellCollection.getCells(f0);
     if (cells.size() < 1) {
       this.uiService.showDialog("There are no cells to in current frame");
@@ -96,7 +91,7 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin
     for (int index = f0 + 1; index <= f0 + (int) this.nFramesSlider.getValue(); index++) {
       cells = this.cellCollection.getCells(index - 1);
       final int frameIndex = index;
-      this.frameSlider.setValue(frameIndex);
+      this.impPreviewStack.setT(frameIndex);
       this.preview();
 
       HashMap<Cell, List<Pair<Point2D, Spine>>> successors = new HashMap<>();
@@ -216,27 +211,10 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin
     if (this.cellCollection != null) {
       RoiManager roiManager = ImageJUtils.getRoiManager();
       roiManager.reset();
-      this.cellCollection.getCells((int) this.frameSlider.getValue()).stream()
-          .map(cell -> cell.getObservedRoi((int) this.frameSlider.getValue()))
-          .filter(roi -> roi != null).forEach(roi -> roiManager.addRoi(roi));
+      this.cellCollection.getCells(this.impPreviewStack.getT()).stream()
+          .map(cell -> cell.getObservedRoi(this.impPreviewStack.getT())).filter(roi -> roi != null)
+          .forEach(roi -> roiManager.addRoi(roi));
       roiManager.runCommand("show all");
-    }
-  }
-
-  @Override
-  public void imageOpened(ImagePlus imp) {
-    // Ignore
-  }
-
-  @Override
-  public void imageClosed(ImagePlus imp) {
-    // Ignore
-  }
-
-  @Override
-  public void imageUpdated(ImagePlus image) {
-    if (image == this.impPreview) {
-      this.updateAndDrawCells();
     }
   }
 }

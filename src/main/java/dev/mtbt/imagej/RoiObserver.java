@@ -2,7 +2,6 @@ package dev.mtbt.imagej;
 
 import ij.gui.Roi;
 import ij.gui.RoiListener;
-import ij.gui.ShapeRoi;
 import ij.ImageListener;
 import ij.ImagePlus;
 import ij.WindowManager;
