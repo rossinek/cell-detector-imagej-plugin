@@ -50,7 +50,7 @@ public abstract class SkeletonPlugin extends DynamicCommand {
   protected RunnableSpinner frameSlider;
   protected RunnableSpinner blurRadiusSlider;
   protected RunnableSpinner thresholdSlider;
-  protected RunnableCheckBox originalCheckBox;
+  protected RunnableCheckBox shapeIndexCheckBox;
   protected RunnableCheckBox skeletonCheckBox;
 
   boolean initialized = false;
@@ -82,14 +82,14 @@ public abstract class SkeletonPlugin extends DynamicCommand {
 
     this.blurRadiusSlider = new RunnableSpinner(4.0, 0.0, 10.0, 0.2, this::preview);
     addCenteredComponent(advancedPanel, new JLabel("Blur"));
-    addCenteredComponent(advancedPanel, blurRadiusSlider);
+    addCenteredComponent(advancedPanel, this.blurRadiusSlider);
     this.thresholdSlider = new RunnableSpinner(0.0, -1.0, 1.0, 0.1, this::preview);
     addCenteredComponent(advancedPanel, new JLabel("Threshold"));
-    addCenteredComponent(advancedPanel, thresholdSlider);
-    this.originalCheckBox = new RunnableCheckBox("show original frame", this::preview);
-    addCenteredComponent(advancedPanel, originalCheckBox);
+    addCenteredComponent(advancedPanel, this.thresholdSlider);
+    this.shapeIndexCheckBox = new RunnableCheckBox("show shape index map", this::preview);
+    addCenteredComponent(advancedPanel, this.shapeIndexCheckBox);
     this.skeletonCheckBox = new RunnableCheckBox("show skeleton", this::preview);
-    addCenteredComponent(advancedPanel, skeletonCheckBox);
+    addCenteredComponent(advancedPanel, this.skeletonCheckBox);
 
     dialogContent.add(Box.createVerticalStrut(20));
     ExpandablePanel expandablePanel =
@@ -109,17 +109,33 @@ public abstract class SkeletonPlugin extends DynamicCommand {
     panel.add(component);
   }
 
-  public void preview() {
-    if (this.initialized) {
+  protected ImagePlus getImpIndexMap() {
+    if (this.impIndexMap == null) {
       computeShapeIndexMap();
       thresholdShapeIndexMap();
-      if (this.originalCheckBox.isSelected()) {
-        impPreview.setProcessor(impOriginalFrame.getProcessor());
-      } else if (this.skeletonCheckBox.isSelected()) {
-        this.skeleton = new Skeleton(this.impIndexMap.duplicate());
-        impPreview.setProcessor(this.skeleton.toImagePlus().getProcessor());
+    }
+    return this.impIndexMap;
+  }
+
+  protected Skeleton getSkeleton() {
+    if (this.skeleton == null) {
+      this.skeleton = new Skeleton(this.getImpIndexMap().duplicate());
+    }
+    return this.skeleton;
+  }
+
+  public void preview() {
+    if (this.initialized) {
+      this.impOriginalFrame = HyperstackHelper.extractFrame(imp, (int) channelSlider.getValue(),
+          imp.getSlice(), (int) frameSlider.getValue());
+      this.impIndexMap = null;
+      this.skeleton = null;
+      if (this.skeletonCheckBox.isSelected()) {
+        impPreview.setProcessor(this.getSkeleton().toImagePlus().getProcessor());
+      } else if (this.shapeIndexCheckBox.isSelected()) {
+        impPreview.setProcessor(getImpIndexMap().getProcessor());
       } else {
-        impPreview.setProcessor(impIndexMap.getProcessor());
+        impPreview.setProcessor(impOriginalFrame.getProcessor());
       }
       impPreview.show();
     }
@@ -136,15 +152,12 @@ public abstract class SkeletonPlugin extends DynamicCommand {
   }
 
   private void computeShapeIndexMap() {
-    this.skeleton = null;
-    this.impOriginalFrame = HyperstackHelper.extractFrame(imp, (int) channelSlider.getValue(),
-        imp.getSlice(), (int) frameSlider.getValue());
     ImagePlus indexMap =
         ShapeIndexMap.getShapeIndexMap(this.impOriginalFrame, (double) blurRadiusSlider.getValue());
-    if (impIndexMap == null) {
-      impIndexMap = indexMap;
+    if (this.impIndexMap == null) {
+      this.impIndexMap = indexMap;
     } else {
-      impIndexMap.setProcessor(indexMap.getProcessor());
+      this.impIndexMap.setProcessor(indexMap.getProcessor());
     }
   }
 
@@ -158,10 +171,7 @@ public abstract class SkeletonPlugin extends DynamicCommand {
   }
 
   protected Spine performSearch(Point point) {
-    if (this.skeleton == null) {
-      this.skeleton = new Skeleton(this.impIndexMap.duplicate());
-    }
-    Spine spine = this.skeleton.findSpine(point);
+    Spine spine = this.getSkeleton().findSpine(point);
     return spine;
   }
 
@@ -191,7 +201,7 @@ public abstract class SkeletonPlugin extends DynamicCommand {
             dev.mtbt.graph.Point p2 = new dev.mtbt.graph.Point(spines.get(i).getKey());
             Spine.splitOverlap(new Pair<>(p1, spine.getValue()),
                 new Pair<>(p2, spines.get(i).getValue()),
-                p -> this.impIndexMap.getProcessor().getf(p.x, p.y));
+                p -> this.getImpIndexMap().getProcessor().getf(p.x, p.y));
             change = true;
             break;
           }
@@ -233,7 +243,7 @@ public abstract class SkeletonPlugin extends DynamicCommand {
     double threshold = (double) thresholdSlider.getValue();
     for (int index = 0; index < line.size(); index++) {
       Point point = line.get(index);
-      if (this.impIndexMap.getProcessor().getf(point.x, point.y) <= threshold) {
+      if (this.getImpIndexMap().getProcessor().getf(point.x, point.y) <= threshold) {
         return index > 0 ? line.get(index - 1) : lineEnd;
       }
     }
