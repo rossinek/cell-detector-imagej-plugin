@@ -9,8 +9,6 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.stream.Collectors;
 import dev.mtbt.Utils;
-import dev.mtbt.imagej.RoiObserver;
-import dev.mtbt.imagej.RoiObserverListener;
 import dev.mtbt.util.Pair;
 import ij.IJ;
 import ij.gui.Line;
@@ -22,7 +20,7 @@ import ij.gui.ShapeRoi;
 import ij.plugin.frame.RoiManager;
 import ij.process.FloatPolygon;
 
-public class Cell extends AbstractCellCollection implements RoiObserverListener {
+public class Cell extends AbstractCellCollection implements CellObserverListener {
   private static final String PROPERTY_CELL_FRAME_ID = "cell-frame-id";
 
   private String name = null;
@@ -43,7 +41,7 @@ public class Cell extends AbstractCellCollection implements RoiObserverListener 
   public Cell(int f0, CellFrame first) {
     this.f0 = f0;
     this.frames.add(first);
-    RoiObserver.addListener(this);
+    CellObserver.addListener(this);
   }
 
   public Cell(int f0, CellFrame first, String family) {
@@ -219,20 +217,6 @@ public class Cell extends AbstractCellCollection implements RoiObserverListener 
     return polylineRoi;
   }
 
-  @Override
-  public void roiModified(Roi modifiedRoi, int id) {
-    if (this.isOwnCellFrameRoi(modifiedRoi)) {
-      if (id == RoiListener.MOVED || id == RoiListener.EXTENDED || id == RoiListener.MODIFIED) {
-        this.cellFrameRoiModified((PolygonRoi) modifiedRoi);
-      }
-    } else if (modifiedRoi.getType() == Roi.LINE && id == RoiListener.CREATED
-        && modifiedRoi.getState() == Roi.NORMAL) {
-      this.cellFrameRoisCut(this.getOwnActiveRois(), (Line) modifiedRoi);
-    } else if (modifiedRoi.getType() == Roi.COMPOSITE && id == RoiListener.CREATED) {
-      this.cellFrameRoisShorten(this.getOwnActiveRois(), (ShapeRoi) modifiedRoi);
-    }
-  }
-
   private List<PolygonRoi> getOwnActiveRois() {
     RoiManager roiManager = RoiManager.getInstance();
     if (roiManager == null)
@@ -241,13 +225,26 @@ public class Cell extends AbstractCellCollection implements RoiObserverListener 
         .map(roi -> (PolygonRoi) roi).collect(Collectors.toList());
   }
 
-  private void cellFrameRoiModified(PolygonRoi modifiedRoi) {
-    String cellFrameId = modifiedRoi.getProperty(PROPERTY_CELL_FRAME_ID);
-    int lastRoiHashCode = this.lastRoiHashCodes.get(cellFrameId);
-    if (lastRoiHashCode != this.getPolygonRoiHashCode(modifiedRoi)) {
-      int index = this.getIndexByCellFrameId(cellFrameId);
-      this.getFrame(index).fitPolyline(Utils.toPolyline(modifiedRoi.getFloatPolygon()));
+  @Override
+  public void cellFrameRoiModified(PolygonRoi modifiedRoi) {
+    if (this.isOwnCellFrameRoi(modifiedRoi)) {
+      String cellFrameId = modifiedRoi.getProperty(PROPERTY_CELL_FRAME_ID);
+      int lastRoiHashCode = this.lastRoiHashCodes.get(cellFrameId);
+      if (lastRoiHashCode != this.getPolygonRoiHashCode(modifiedRoi)) {
+        int index = this.getIndexByCellFrameId(cellFrameId);
+        this.getFrame(index).fitPolyline(Utils.toPolyline(modifiedRoi.getFloatPolygon()));
+      }
     }
+  }
+
+  @Override
+  public void cellFrameRoisShorten(ShapeRoi shapeRoi) {
+    this.cellFrameRoisShorten(this.getOwnActiveRois(), shapeRoi);
+  }
+
+  @Override
+  public void cellFrameRoisCut(Line lineRoi) {
+    this.cellFrameRoisCut(this.getOwnActiveRois(), lineRoi);
   }
 
   private void cellFrameRoisCut(List<PolygonRoi> roisToCut, Line line) {
@@ -307,7 +304,6 @@ public class Cell extends AbstractCellCollection implements RoiObserverListener 
         shape.getImage().updateAndDraw();
       }
     });
-
   }
 
   private boolean isOwnCellFrameRoi(Roi roi) {
@@ -358,6 +354,6 @@ public class Cell extends AbstractCellCollection implements RoiObserverListener 
   public void destroy() {
     super.destroy();
     this.destroyChildren();
-    RoiObserver.removeListener(this);
+    CellObserver.removeListener(this);
   }
 }

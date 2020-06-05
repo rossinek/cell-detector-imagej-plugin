@@ -77,14 +77,6 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
     this.dialogContent = new JPanel();
     this.dialogContent.setLayout(new BoxLayout(this.dialogContent, BoxLayout.Y_AXIS));
 
-    // this.channelSlider = new RunnableSpinner(imp.getC(), 1, imp.getNChannels(), this::preview);
-    // addCenteredComponent(this.dialogContent, new JLabel("Channel"));
-    // addCenteredComponent(this.dialogContent, channelSlider);
-
-    // this.frameSlider = new RunnableSpinner(imp.getFrame(), 1, imp.getNFrames(), this::preview);
-    // addCenteredComponent(this.dialogContent, new JLabel("Frame"));
-    // addCenteredComponent(this.dialogContent, frameSlider);
-
     JPanel advancedPanel = new JPanel();
     advancedPanel.setLayout(new BoxLayout(advancedPanel, BoxLayout.Y_AXIS));
 
@@ -161,12 +153,10 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
 
   protected void done() {
     cleanup();
-    this.dialog.setVisible(false);
   }
 
   protected void cleanup() {
     impPreviewStack.close();
-    this.dialog.setVisible(false);
   }
 
   private void computeShapeIndexMap() {

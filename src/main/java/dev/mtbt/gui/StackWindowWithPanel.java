@@ -3,6 +3,7 @@ package dev.mtbt.gui;
 import ij.ImagePlus;
 import ij.gui.StackWindow;
 import java.awt.Panel;
+import java.lang.reflect.Method;
 import java.awt.Component;
 import java.awt.BorderLayout;
 import javax.swing.BoxLayout;
@@ -35,6 +36,19 @@ public class StackWindowWithPanel extends StackWindow {
     this.add(panel, BorderLayout.WEST);
     this.add(this.mainPanel, BorderLayout.CENTER);
     this.pack();
+
+    // IJ Fix: Emit imageOpened event manually.
+    // ImagePlus does not emit it if custom window is used
+    try {
+      Method m = ImagePlus.class.getDeclaredMethod("notifyListeners", int.class);
+      m.setAccessible(true);
+      m.invoke(imp, 0 /* ImagePlus.OPENED */);
+    } catch (Exception e) {
+      e.printStackTrace();
+      throw new IllegalAccessError(
+          "[StackWindowWithPanel] ImagePlus implementation has been changed. "
+              + "StackWindowWithPanel is no longer compatible");
+    }
   }
 
   public JPanel getSidePanel() {

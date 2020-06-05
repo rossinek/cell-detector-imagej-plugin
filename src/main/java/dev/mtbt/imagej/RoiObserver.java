@@ -71,8 +71,6 @@ public class RoiObserver {
         return;
       }
       Roi roi = imp.getRoi();
-      // System.out.println("Event: " + roi.getTypeAsString() + " : " +
-      // this.roiEventIdAsString(id));
       if (id == RoiListener.MODIFIED) {
         if (roi.getType() == Roi.LINE) {
           if (id == RoiListener.MODIFIED) {
@@ -95,31 +93,27 @@ public class RoiObserver {
     @Override
     public void mousePressed(MouseEvent e) {
       // ignore
-      // System.out.println("> Mouse pressed");
     }
 
     @Override
     public void mouseEntered(MouseEvent e) {
       // ignore
-      // System.out.println("> Mouse entered");
     }
 
     @Override
     public void mouseExited(MouseEvent e) {
       // ignore
-      // System.out.println("> Mouse exited");
     }
 
     @Override
     public void imageClosed(ImagePlus imp) {
       // ignore
-      // System.out.println("> IMAGE closed");
     }
 
     @Override
     public void imageUpdated(ImagePlus imp) {
       // ignore
-      // System.out.println("> IMAGE updated");
+
     }
 
     private String roiEventIdAsString(int id) {
