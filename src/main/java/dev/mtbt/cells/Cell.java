@@ -226,13 +226,14 @@ public class Cell extends AbstractCellCollection implements CellObserverListener
   }
 
   @Override
-  public void cellFrameRoiModified(PolygonRoi modifiedRoi) {
+  public void cellFrameRoiModified(Roi modifiedRoi) {
     if (this.isOwnCellFrameRoi(modifiedRoi)) {
-      String cellFrameId = modifiedRoi.getProperty(PROPERTY_CELL_FRAME_ID);
+      PolygonRoi polygonRoi = (PolygonRoi) modifiedRoi;
+      String cellFrameId = polygonRoi.getProperty(PROPERTY_CELL_FRAME_ID);
       int lastRoiHashCode = this.lastRoiHashCodes.get(cellFrameId);
-      if (lastRoiHashCode != this.getPolygonRoiHashCode(modifiedRoi)) {
+      if (lastRoiHashCode != this.getPolygonRoiHashCode(polygonRoi)) {
         int index = this.getIndexByCellFrameId(cellFrameId);
-        this.getFrame(index).fitPolyline(Utils.toPolyline(modifiedRoi.getFloatPolygon()));
+        this.getFrame(index).fitPolyline(Utils.toPolyline(polygonRoi.getFloatPolygon()));
       }
     }
   }

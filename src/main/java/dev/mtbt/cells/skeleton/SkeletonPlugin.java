@@ -56,6 +56,7 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
   protected RunnableCheckBox shapeIndexCheckBox;
   protected RunnableCheckBox skeletonCheckBox;
   protected DialogActions dialogActions;
+  protected SkeletonPluginToolbar toolbar;
 
   protected CellCollection cellCollection = null;
 
@@ -104,11 +105,16 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
         new ExpandablePanel("advanced settings >>", advancedPanel, () -> this.dialog.pack());
     addCenteredComponent(this.dialogContent, expandablePanel);
 
+    JPanel footerPanel = new JPanel();
+    footerPanel.setLayout(new BoxLayout(footerPanel, BoxLayout.Y_AXIS));
+    this.toolbar = new SkeletonPluginToolbar();
     this.dialogActions = new DialogActions(this::done, this::cleanup);
+    addCenteredComponent(footerPanel, this.toolbar);
+    addCenteredComponent(footerPanel, this.dialogActions);
 
     this.dialog = new StackWindowWithPanel(this.impPreviewStack);
     this.dialog.getSidePanel().add(this.dialogContent, BorderLayout.NORTH);
-    this.dialog.getSidePanel().add(this.dialogActions, BorderLayout.SOUTH);
+    this.dialog.getSidePanel().add(footerPanel, BorderLayout.SOUTH);
     this.dialog.pack();
 
     this.initialized = true;

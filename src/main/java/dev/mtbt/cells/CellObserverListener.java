@@ -1,11 +1,11 @@
 package dev.mtbt.cells;
 
 import ij.gui.Line;
-import ij.gui.PolygonRoi;
+import ij.gui.Roi;
 import ij.gui.ShapeRoi;
 
 public interface CellObserverListener {
-  public void cellFrameRoiModified(PolygonRoi modifiedRoi);
+  public void cellFrameRoiModified(Roi modifiedRoi);
 
   public void cellFrameRoisCut(Line lineRoi);
 
