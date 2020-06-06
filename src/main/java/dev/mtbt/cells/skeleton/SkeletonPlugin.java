@@ -2,6 +2,8 @@ package dev.mtbt.cells.skeleton;
 
 import ij.ImageListener;
 import ij.ImagePlus;
+import ij.gui.ImageRoi;
+import ij.gui.Overlay;
 import ij.plugin.frame.RoiManager;
 import ij.process.FloatProcessor;
 
@@ -10,6 +12,7 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.stream.Collectors;
@@ -37,6 +40,7 @@ import dev.mtbt.util.Pair;
 import dev.mtbt.vendor.shapeindex.ShapeIndexMap;
 
 public abstract class SkeletonPlugin extends DynamicCommand implements ImageListener {
+  static private SkeletonPluginCache cache;
 
   @Parameter
   protected ImagePlus imp;
@@ -44,18 +48,14 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
   @Parameter
   protected UIService uiService;
 
-  private ImagePlus impIndexMap = null;
-
   protected ImagePlus impPreviewStack = null;
-  protected Skeleton skeleton = null;
-
   protected StackWindowWithPanel dialog;
-  protected DialogActions dialogActions;
   protected JPanel dialogContent;
   protected RunnableSpinner blurRadiusSlider;
   protected RunnableSpinner thresholdSlider;
   protected RunnableCheckBox shapeIndexCheckBox;
   protected RunnableCheckBox skeletonCheckBox;
+  protected DialogActions dialogActions;
 
   protected CellCollection cellCollection = null;
 
@@ -73,6 +73,14 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
     }
     ImagePlus.addImageListener(this);
     this.impPreviewStack = this.imp.duplicate();
+
+    if (SkeletonPlugin.cache == null || !SkeletonPlugin.cache.isTarget(this.imp)) {
+      SkeletonPlugin.cache = new SkeletonPluginCache(this.imp);
+    } else {
+      this.impPreviewStack.setSlice(SkeletonPlugin.cache.slice);
+      this.impPreviewStack.setC(SkeletonPlugin.cache.channel);
+      this.impPreviewStack.setT(SkeletonPlugin.cache.frame);
+    }
 
     this.dialogContent = new JPanel();
     this.dialogContent.setLayout(new BoxLayout(this.dialogContent, BoxLayout.Y_AXIS));
@@ -112,19 +120,49 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
     panel.add(component);
   }
 
-  protected ImagePlus getImpIndexMap() {
-    if (this.impIndexMap == null) {
-      computeShapeIndexMap();
-      thresholdShapeIndexMap();
-    }
-    return this.impIndexMap;
+  private String getIndexMapId() {
+    int slice = this.impPreviewStack.getSlice();
+    int channel = this.impPreviewStack.getChannel();
+    int frame = this.impPreviewStack.getT();
+    double blur = (double) blurRadiusSlider.getValue();
+    return slice + ";" + channel + ";" + frame + ";" + blur;
+  }
+
+  private String getSkeletonId() {
+    double threshold = (double) thresholdSlider.getValue();
+    return this.getIndexMapId() + ";" + threshold;
   }
 
   protected Skeleton getSkeleton() {
-    if (this.skeleton == null) {
-      this.skeleton = new Skeleton(this.getImpIndexMap().duplicate());
+    String sId = this.getSkeletonId();
+    Skeleton skeleton = SkeletonPlugin.cache.getSkeleton(sId);
+    if (skeleton == null) {
+      skeleton = new Skeleton(this.getShapeIndexMap().duplicate());
+      SkeletonPlugin.cache.setSkeleton(sId, skeleton);
     }
-    return this.skeleton;
+    return skeleton;
+  }
+
+  private ImagePlus getShapeIndexMap() {
+    String simId = this.getIndexMapId();
+    double blur = (double) blurRadiusSlider.getValue();
+    ImagePlus indexMap = SkeletonPlugin.cache.getIndexMap(simId);
+    if (indexMap == null) {
+      indexMap = ShapeIndexMap.getShapeIndexMap(this.getOriginalFrame(), blur);
+      SkeletonPlugin.cache.setIndexMap(simId, indexMap);
+    }
+    return thresholdShapeIndexMap(indexMap);
+  }
+
+  private ImagePlus thresholdShapeIndexMap(ImagePlus input) {
+    ImagePlus impIndexMap = input.duplicate();
+    FloatProcessor fp = (FloatProcessor) impIndexMap.getProcessor();
+    int length = impIndexMap.getProcessor().getPixelCount();
+    for (int i = 0; i < length; i++) {
+      float val = fp.getf(i);
+      fp.setf(i, val > (double) thresholdSlider.getValue() ? val : Float.NEGATIVE_INFINITY);
+    }
+    return impIndexMap;
   }
 
   protected ImagePlus getOriginalFrame() {
@@ -132,22 +170,34 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
         this.impPreviewStack.getSlice(), this.impPreviewStack.getT());
   }
 
+  private void showImageOverlay(ImagePlus overlay) {
+    ImageRoi roi = new ImageRoi(0, 0, overlay.getProcessor());
+    roi.setName("__image-overlay__");
+    Overlay overlayList = this.impPreviewStack.getOverlay();
+    if (overlayList == null) {
+      overlayList = new Overlay();
+    }
+    overlayList.add(roi);
+    this.impPreviewStack.setOverlay(overlayList);
+  }
+
+  private void removeImageOverlay() {
+    Overlay overlayList = this.impPreviewStack.getOverlay();
+    if (overlayList != null) {
+      overlayList.remove("__image-overlay__");
+      this.impPreviewStack.setOverlay(overlayList);
+    }
+  }
+
   public void preview() {
     if (this.initialized) {
-      this.impIndexMap = null;
-      this.skeleton = null;
-      // if (this.skeletonCheckBox.isSelected()) {
-      // this.impPreview.setProcessor(this.getSkeleton().toImagePlus().getProcessor());
-      // } else if (this.shapeIndexCheckBox.isSelected()) {
-      // this.impPreview.setProcessor(getImpIndexMap().getProcessor());
-      // } else {
-      // this.impPreview.setProcessor(impOriginalFrame.getProcessor());
-      // }
-      // this.impPreview.show();
-      // this.impPreviewStack.setC((int) channelSlider.getValue());
-      // this.impPreviewStack.setT((int) frameSlider.getValue());
-      this.impPreviewStack.show();
       this.updateAndDrawCells();
+      this.removeImageOverlay();
+      if (this.skeletonCheckBox.isSelected()) {
+        showImageOverlay(this.getSkeleton().toImagePlus());
+      } else if (this.shapeIndexCheckBox.isSelected()) {
+        showImageOverlay(getShapeIndexMap());
+      }
     }
   }
 
@@ -157,25 +207,6 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
 
   protected void cleanup() {
     impPreviewStack.close();
-  }
-
-  private void computeShapeIndexMap() {
-    ImagePlus indexMap = ShapeIndexMap.getShapeIndexMap(this.getOriginalFrame(),
-        (double) blurRadiusSlider.getValue());
-    if (this.impIndexMap == null) {
-      this.impIndexMap = indexMap;
-    } else {
-      this.impIndexMap.setProcessor(indexMap.getProcessor());
-    }
-  }
-
-  private void thresholdShapeIndexMap() {
-    FloatProcessor fp = (FloatProcessor) impIndexMap.getProcessor();
-    int length = impIndexMap.getProcessor().getPixelCount();
-    for (int i = 0; i < length; i++) {
-      float val = fp.getf(i);
-      fp.setf(i, val > (double) thresholdSlider.getValue() ? val : Float.NEGATIVE_INFINITY);
-    }
   }
 
   protected Spine performSearch(Point point) {
@@ -209,7 +240,7 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
             dev.mtbt.graph.Point p2 = new dev.mtbt.graph.Point(spines.get(i).getKey());
             Spine.splitOverlap(new Pair<>(p1, spine.getValue()),
                 new Pair<>(p2, spines.get(i).getValue()),
-                p -> this.getImpIndexMap().getProcessor().getf(p.x, p.y));
+                p -> this.getShapeIndexMap().getProcessor().getf(p.x, p.y));
             change = true;
             break;
           }
@@ -251,7 +282,7 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
     double threshold = (double) thresholdSlider.getValue();
     for (int index = 0; index < line.size(); index++) {
       Point point = line.get(index);
-      if (this.getImpIndexMap().getProcessor().getf(point.x, point.y) <= threshold) {
+      if (this.getShapeIndexMap().getProcessor().getf(point.x, point.y) <= threshold) {
         return index > 0 ? line.get(index - 1) : lineEnd;
       }
     }
@@ -283,6 +314,46 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
   public void imageUpdated(ImagePlus image) {
     if (image == this.impPreviewStack) {
       this.preview();
+      SkeletonPlugin.cache.updateCache(this.impPreviewStack);
+    }
+  }
+
+  private class SkeletonPluginCache {
+    private int impId;
+    private Hashtable<String, ImagePlus> indexMaps = new Hashtable<>();
+    private Hashtable<String, Skeleton> skeletons = new Hashtable<>();
+    public int slice;
+    public int channel;
+    public int frame;
+
+    public SkeletonPluginCache(ImagePlus originalImp) {
+      this.impId = originalImp.getID();
+    }
+
+    public boolean isTarget(ImagePlus originalImp) {
+      return this.impId == originalImp.getID();
+    }
+
+    public void updateCache(ImagePlus preview) {
+      this.slice = preview.getSlice();
+      this.channel = preview.getChannel();
+      this.frame = preview.getT();
+    }
+
+    public ImagePlus getIndexMap(String id) {
+      return this.indexMaps.get(id);
+    }
+
+    public void setIndexMap(String id, ImagePlus imp) {
+      this.indexMaps.put(id, imp);
+    }
+
+    public Skeleton getSkeleton(String id) {
+      return this.skeletons.get(id);
+    }
+
+    public void setSkeleton(String id, Skeleton skeleton) {
+      this.skeletons.put(id, skeleton);
     }
   }
 }
