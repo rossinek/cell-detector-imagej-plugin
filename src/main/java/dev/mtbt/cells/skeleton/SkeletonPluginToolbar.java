@@ -16,7 +16,6 @@ import dev.mtbt.cells.CellObserver;
 import dev.mtbt.gui.ClearableButtonGroup;
 import ij.IJ;
 import ij.IJEventListener;
-import ij.gui.Toolbar;
 
 public class SkeletonPluginToolbar extends JPanel implements ActionListener, IJEventListener {
   Consumer<String> listener;
@@ -78,7 +77,6 @@ public class SkeletonPluginToolbar extends JPanel implements ActionListener, IJE
     boolean isSelected = this.buttonGroup.getSelection() != null;
     String tool = isSelected ? e.getActionCommand() : null;
     CellObserver.setActiveTool(tool);
-    System.out.println("setActiveTool: " + tool);
     listener.accept(tool);
   }
 
@@ -88,7 +86,6 @@ public class SkeletonPluginToolbar extends JPanel implements ActionListener, IJE
     if (eventID == IJEventListener.TOOL_CHANGED && activeButton != null
         && IJ.getToolName() != activeButton.getActionCommand()) {
       this.buttonGroup.clearSelection();
-      System.out.println("setActiveTool: NULL!");
       CellObserver.setActiveTool(null);
     }
   }

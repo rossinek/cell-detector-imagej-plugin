@@ -60,11 +60,6 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
     this.preview();
   }
 
-  // public void preview() {
-  // super.preview();
-  // this.updateAndDrawCells();
-  // }
-
   @Override
   public Future<Void> output() {
     return this.result;
@@ -73,7 +68,6 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
   protected void showFirstFrameWithCells() {
     int frame = this.cellCollection.isEmpty() ? 1 : this.cellCollection.getF0();
     this.impPreviewStack.setT(frame);
-    // this.frameSlider.getModel().setValue(frame);
   }
 
   protected void onRunClick() {
@@ -84,7 +78,7 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
     int f0 = this.impPreviewStack.getT();
     List<Cell> cells = this.cellCollection.getCells(f0);
     if (cells.size() < 1) {
-      this.uiService.showDialog("There are no cells to in current frame");
+      this.uiService.showDialog("There are no cells in current frame");
       return;
     }
     cells.forEach(cell -> cell.clearFuture(f0 + 1));

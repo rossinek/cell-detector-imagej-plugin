@@ -11,7 +11,6 @@ import ij.gui.Line;
 import ij.gui.Roi;
 import ij.gui.RoiListener;
 import ij.gui.ShapeRoi;
-import ij.gui.Toolbar;
 
 public class CellObserver {
   // Those are actual IJ tool names

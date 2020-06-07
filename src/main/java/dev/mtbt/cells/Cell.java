@@ -203,6 +203,14 @@ public class Cell extends AbstractCellCollection implements CellObserverListener
     return Integer.parseInt(parts[parts.length - 1]);
   }
 
+  public PolygonRoi toRoi(int index) {
+    CellFrame frame = this.getFrame(index);
+    if (frame == null) {
+      return null;
+    }
+    return this.toRoi(frame);
+  }
+
   private PolygonRoi toRoi(CellFrame frame) {
     if (frame == null)
       return null;
