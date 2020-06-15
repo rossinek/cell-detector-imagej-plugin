@@ -35,9 +35,21 @@ public class ShapeIndexMap implements Command {
   public void run() {
     final GenericDialog gd = new GenericDialog("Shape index map");
     gd.addNumericField("Gaussian_blur_radius (0 = off)", 0, 0);
+    gd.addCheckbox("threshold", false);
     gd.showDialog();
     if (!gd.wasCanceled()) {
-      getShapeIndexMap(imp, gd.getNextNumber()).show();
+      ImagePlus result = getShapeIndexMap(imp, gd.getNextNumber());
+      if (gd.getNextBoolean()) {
+        for (int frame = 1; frame <= result.getStack().getSize(); frame++) {
+          FloatProcessor fp = (FloatProcessor) result.getStack().getProcessor(frame);
+          int length = fp.getPixelCount();
+          for (int i = 0; i < length; i++) {
+            float val = fp.getf(i);
+            fp.setf(i, val > 0 ? val : Float.NEGATIVE_INFINITY);
+          }
+        }
+      }
+      result.show();
     }
   }
 

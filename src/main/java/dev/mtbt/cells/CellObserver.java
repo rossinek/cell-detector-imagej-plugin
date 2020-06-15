@@ -52,6 +52,7 @@ public class CellObserver {
   }
 
   static private void notify(Roi modifiedRoi, int id) {
+    // System.out.println(modifiedRoi.getName() + " : " + RoiObserver.roiEventIdToString(id));
     boolean isCut = modifiedRoi.getType() == Roi.LINE && id == RoiListener.CREATED
         && modifiedRoi.getState() == Roi.NORMAL;
     boolean isErase = modifiedRoi.getType() == Roi.COMPOSITE && id == RoiListener.CREATED;

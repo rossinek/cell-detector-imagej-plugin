@@ -9,13 +9,13 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.stream.Collectors;
 import dev.mtbt.Utils;
+import dev.mtbt.imagej.PolygonRoiVerbose;
 import dev.mtbt.util.Pair;
 import ij.IJ;
 import ij.gui.Line;
 import ij.gui.PointRoi;
 import ij.gui.PolygonRoi;
 import ij.gui.Roi;
-import ij.gui.RoiListener;
 import ij.gui.ShapeRoi;
 import ij.plugin.frame.RoiManager;
 import ij.process.FloatPolygon;
@@ -221,7 +221,7 @@ public class Cell extends AbstractCellCollection implements CellObserverListener
       xPoints[i] = (float) polyline.get(i).getX();
       yPoints[i] = (float) polyline.get(i).getY();
     }
-    PolygonRoi polylineRoi = new PolygonRoi(xPoints, yPoints, Roi.POLYLINE);
+    PolygonRoi polylineRoi = new PolygonRoiVerbose(xPoints, yPoints, Roi.POLYLINE);
     return polylineRoi;
   }
 

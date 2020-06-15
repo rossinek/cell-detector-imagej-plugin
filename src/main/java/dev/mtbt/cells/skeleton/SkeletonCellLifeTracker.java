@@ -10,7 +10,8 @@ import dev.mtbt.gui.RunnableButton;
 import dev.mtbt.gui.RunnableSpinner;
 import dev.mtbt.util.Pair;
 import ij.plugin.frame.RoiManager;
-
+import java.awt.ComponentOrientation;
+import java.awt.FlowLayout;
 import java.awt.Point;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
@@ -22,15 +23,17 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import javax.swing.Box;
-import javax.swing.JLabel;
+import javax.swing.JPanel;
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
 
-@Plugin(type = Command.class, menuPath = "Development>Skeleton>Cell Life Tracker")
+@Plugin(type = Command.class, menuPath = "Development>Skeleton>Manual Cell Life Tracker")
 public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLifeTracker {
 
-  private RunnableButton runButton;
-  private RunnableSpinner nFramesSlider;
+  private RunnableButton previousFrameButton;
+  private RunnableButton duplicateNextFrameButton;
+  private RunnableButton calculateNextFramesButton;
+  private RunnableSpinner nFramesSpinner;
 
   CompletableFuture<Void> result = new CompletableFuture<>();
 
@@ -47,14 +50,30 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
       return;
     }
 
-    dialogContent.add(Box.createVerticalStrut(20));
-    this.nFramesSlider = new RunnableSpinner(20, 1, 40, null);
-    addCenteredComponent(dialogContent, new JLabel("Track life for (#frames):"));
-    addCenteredComponent(dialogContent, nFramesSlider);
+    JPanel buttonsPanel = new JPanel();
+    buttonsPanel.setLayout(new FlowLayout());
+    buttonsPanel.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+
+    this.previousFrameButton = new RunnableButton("< previous", this::onPreviousFrameClick);
+    buttonsPanel.add(this.previousFrameButton);
+
+    this.nFramesSpinner = new RunnableSpinner(1, 1, 20, () -> {
+      int n = (int) this.nFramesSpinner.getValue();
+      this.calculateNextFramesButton
+          .setText(n > 1 ? ("calculate next " + n + " >") : "calculate next >");
+    });
+    buttonsPanel.add(this.nFramesSpinner);
+
+    this.calculateNextFramesButton =
+        new RunnableButton("calculate next >", this::onCalculateNextFramesClick);
+    buttonsPanel.add(this.calculateNextFramesButton);
+
+    this.duplicateNextFrameButton =
+        new RunnableButton("duplicate >", this::onDuplicateNextFrameClick);
+    buttonsPanel.add(this.duplicateNextFrameButton);
 
     dialogContent.add(Box.createVerticalStrut(20));
-    this.runButton = new RunnableButton("Run!", this::onRunClick);
-    addCenteredComponent(dialogContent, runButton);
+    addCenteredComponent(dialogContent, buttonsPanel);
 
     this.dialog.pack();
     this.preview();
@@ -70,7 +89,14 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
     this.impPreviewStack.setT(frame);
   }
 
-  protected void onRunClick() {
+  protected void onPreviousFrameClick() {
+    int frame = this.impPreviewStack.getT();
+    if (frame > 1) {
+      this.impPreviewStack.setT(frame - 1);
+    }
+  }
+
+  protected void onDuplicateNextFrameClick() {
     if (this.cellCollection == null) {
       this.uiService.showDialog("There are no cells to track");
       return;
@@ -82,71 +108,99 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
       return;
     }
     cells.forEach(cell -> cell.clearFuture(f0 + 1));
-    for (int index = f0 + 1; index <= f0 + (int) this.nFramesSlider.getValue(); index++) {
-      cells = this.cellCollection.getCells(index - 1);
-      final int frameIndex = index;
-      this.impPreviewStack.setT(frameIndex);
-      this.preview();
-
-      HashMap<Cell, List<Pair<Point2D, Spine>>> successors = new HashMap<>();
-
-      cells.stream().forEach(cell -> {
-        // generate spines for some points on previous spine frame
-        // get generated spine that is closest to all points
-        // add it as next frame to cell
-        CellFrame frame = cell.getFrame(frameIndex - 1);
-        List<Double> ratioCandidates = Arrays.asList(0.2, 0.4, 0.6, 0.8);
-        List<Point2D> pointCandidates = ratioCandidates.stream()
-            .map(ratio -> frame.pointAlongLine(ratio)).collect(Collectors.toList());
-        Pair<Point2D, Spine> nextSpine = this.bestCandidateForNewSpine(pointCandidates);
-
-        List<Pair<Point2D, Spine>> nextSpines = new ArrayList<>(Arrays.asList(nextSpine));
-
-        int candidateIndex = pointCandidates.indexOf(nextSpine.getKey());
-        double nextSpineLength = Utils.polylineLength(nextSpine.getValue().toPolyline());
-        double prevSpineLength = frame.getLength();
-        int nRatios = ratioCandidates.size();
-        if (nextSpineLength < 0.9 * prevSpineLength) {
-          List<Double> oppositeRatios;
-          if ((double) candidateIndex >= nRatios / 2.0) {
-            oppositeRatios = ratioCandidates.subList(0, nRatios / 2);
-          } else {
-            oppositeRatios = ratioCandidates.subList((int) Math.ceil(nRatios / 2.0), nRatios);
-          }
-
-          List<Point2D> oppositePointCandidates = oppositeRatios.stream()
-              .map(ratio -> frame.pointAlongLine(ratio)).collect(Collectors.toList());
-          Pair<Point2D, Spine> anotherNextSpine =
-              this.bestCandidateForNewSpine(oppositePointCandidates);
-
-          if (!nextSpine.getValue().equals(anotherNextSpine.getValue())) {
-            nextSpines.add(anotherNextSpine);
-            if ((double) candidateIndex < nRatios / 2.0) {
-              Collections.reverse(nextSpines);
-            }
-          }
-        }
-        successors.put(cell, nextSpines);
-      });
-
-      this.fixConflicts(successors.values().stream().flatMap(l -> l.stream())
-          .map(p -> new Pair<>(Utils.toAwtPoint(p.getKey()), p.getValue()))
-          .collect(Collectors.toList()));
-
-      successors.forEach((cell, list) -> {
-        if (list.size() < 2) {
-          CellFrame prevCellFrame = cell.getFrame(frameIndex - 1);
-          this.ensureValidSuccessorDirection(prevCellFrame, list.get(0).getValue());
-          cell.setFrame(frameIndex, this.spineToCellFrame(list.get(0).getValue()));
-        } else {
-          this.ensureValidSiblingsDirections(
-              list.stream().map(Pair::getValue).collect(Collectors.toList()));
-          Cell c1 = new Cell(frameIndex, this.spineToCellFrame(list.get(0).getValue()));
-          Cell c2 = new Cell(frameIndex, this.spineToCellFrame(list.get(1).getValue()));
-          cell.setChildren(c1, c2);
-        }
-      });
+    int index = f0 + 1;
+    if (index > this.impPreviewStack.getNFrames()) {
+      return;
     }
+    cells.forEach(cell -> cell.setFrame(index, cell.getFrame(index - 1).clone()));
+    this.impPreviewStack.setT(index);
+  }
+
+  protected void onCalculateNextFramesClick() {
+    for (int i = 0; i < (int) this.nFramesSpinner.getValue(); i++) {
+      this.calculateNextFrame();
+    }
+  }
+
+  protected void calculateNextFrame() {
+    if (this.cellCollection == null) {
+      this.uiService.showDialog("There are no cells to track");
+      return;
+    }
+    int f0 = this.impPreviewStack.getT();
+    List<Cell> cells = this.cellCollection.getCells(f0);
+    if (cells.size() < 1) {
+      this.uiService.showDialog("There are no cells in current frame");
+      return;
+    }
+    cells.forEach(cell -> cell.clearFuture(f0 + 1));
+    int index = f0 + 1;
+    if (index > this.impPreviewStack.getNFrames()) {
+      return;
+    }
+    cells = this.cellCollection.getCells(index - 1);
+    final int frameIndex = index;
+    this.impPreviewStack.setT(frameIndex);
+    this.preview();
+
+    HashMap<Cell, List<Pair<Point2D, Spine>>> successors = new HashMap<>();
+
+    cells.stream().forEach(cell -> {
+      // generate spines for some points on previous spine frame
+      // get generated spine that is closest to all points
+      // add it as next frame to cell
+      CellFrame frame = cell.getFrame(frameIndex - 1);
+      List<Double> ratioCandidates = Arrays.asList(0.2, 0.4, 0.6, 0.8);
+      List<Point2D> pointCandidates = ratioCandidates.stream()
+          .map(ratio -> frame.pointAlongLine(ratio)).collect(Collectors.toList());
+      Pair<Point2D, Spine> nextSpine = this.bestCandidateForNewSpine(pointCandidates);
+
+      List<Pair<Point2D, Spine>> nextSpines = new ArrayList<>(Arrays.asList(nextSpine));
+
+      int candidateIndex = pointCandidates.indexOf(nextSpine.getKey());
+      double nextSpineLength = Utils.polylineLength(nextSpine.getValue().toPolyline());
+      double prevSpineLength = frame.getLength();
+      int nRatios = ratioCandidates.size();
+      if (nextSpineLength < 0.9 * prevSpineLength) {
+        List<Double> oppositeRatios;
+        if ((double) candidateIndex >= nRatios / 2.0) {
+          oppositeRatios = ratioCandidates.subList(0, nRatios / 2);
+        } else {
+          oppositeRatios = ratioCandidates.subList((int) Math.ceil(nRatios / 2.0), nRatios);
+        }
+
+        List<Point2D> oppositePointCandidates = oppositeRatios.stream()
+            .map(ratio -> frame.pointAlongLine(ratio)).collect(Collectors.toList());
+        Pair<Point2D, Spine> anotherNextSpine =
+            this.bestCandidateForNewSpine(oppositePointCandidates);
+
+        if (!nextSpine.getValue().equals(anotherNextSpine.getValue())) {
+          nextSpines.add(anotherNextSpine);
+          if ((double) candidateIndex < nRatios / 2.0) {
+            Collections.reverse(nextSpines);
+          }
+        }
+      }
+      successors.put(cell, nextSpines);
+    });
+
+    this.fixConflicts(successors.values().stream().flatMap(l -> l.stream())
+        .map(p -> new Pair<>(Utils.toAwtPoint(p.getKey()), p.getValue()))
+        .collect(Collectors.toList()));
+
+    successors.forEach((cell, list) -> {
+      if (list.size() < 2) {
+        CellFrame prevCellFrame = cell.getFrame(frameIndex - 1);
+        this.ensureValidSuccessorDirection(prevCellFrame, list.get(0).getValue());
+        cell.setFrame(frameIndex, this.spineToCellFrame(list.get(0).getValue()));
+      } else {
+        this.ensureValidSiblingsDirections(
+            list.stream().map(Pair::getValue).collect(Collectors.toList()));
+        Cell c1 = new Cell(frameIndex, this.spineToCellFrame(list.get(0).getValue()));
+        Cell c2 = new Cell(frameIndex, this.spineToCellFrame(list.get(1).getValue()));
+        cell.setChildren(c1, c2);
+      }
+    });
 
     this.preview();
   }

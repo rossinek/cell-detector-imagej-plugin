@@ -30,6 +30,25 @@ public class RoiObserver {
     new ArrayList<>(listeners).forEach(listener -> listener.roiModified(roi, id));
   }
 
+  public static String roiEventIdToString(int id) {
+    switch (id) {
+      case 1:
+        return "CREATED";
+      case 2:
+        return "MOVED";
+      case 3:
+        return "MODIFIED";
+      case 4:
+        return "EXTENDED";
+      case 5:
+        return "COMPLETED";
+      case 6:
+        return "DELETED";
+      default:
+        return "UNKNOWN";
+    }
+  }
+
   static private class EventsListener implements RoiListener, MouseListener, ImageListener {
     private Roi lastLineRoi;
     private Roi lastShapeRoi;
@@ -71,14 +90,11 @@ public class RoiObserver {
         return;
       }
       Roi roi = imp.getRoi();
-      if (id == RoiListener.MODIFIED) {
-        if (roi.getType() == Roi.LINE) {
-          if (id == RoiListener.MODIFIED) {
-            this.lastLineRoi = roi;
-          }
-        } else {
-          RoiObserver.notify(roi, id);
-        }
+      // System.out.println(roi.getName() + " : " + RoiObserver.roiEventIdToString(id));
+      if (roi.getType() == Roi.LINE && id == RoiListener.MODIFIED) {
+        this.lastLineRoi = roi;
+      } else if (id == RoiListener.MODIFIED || id == RoiListener.MOVED) {
+        RoiObserver.notify(roi, id);
       }
       if (roi.getType() == Roi.COMPOSITE && id == RoiListener.CREATED) {
         this.lastShapeRoi = roi;
@@ -114,25 +130,6 @@ public class RoiObserver {
     public void imageUpdated(ImagePlus imp) {
       // ignore
 
-    }
-
-    private String roiEventIdAsString(int id) {
-      switch (id) {
-        case 1:
-          return "CREATED";
-        case 2:
-          return "MOVED";
-        case 3:
-          return "MODIFIED";
-        case 4:
-          return "EXTENDED";
-        case 5:
-          return "COMPLETED";
-        case 6:
-          return "DELETED";
-        default:
-          return "UNKNOWN";
-      }
     }
   }
 }

@@ -108,7 +108,9 @@ public class Spine extends Graph {
     if (ces == 0) {
       return OverlapType.None;
     }
-    int cvs = s1.commonVertices(new Vertex[] {s2.e1, s2.e2});
+    int cvs = 0;
+    cvs += Arrays.asList(new Vertex[] {s1.e1, s1.e2}).contains(s2.e1) ? 1 : 0;
+    cvs += Arrays.asList(new Vertex[] {s1.e1, s1.e2}).contains(s2.e2) ? 1 : 0;
     if (cvs == 0) {
       return OverlapType.Partial;
     }
@@ -182,13 +184,14 @@ public class Spine extends Graph {
     // 1. DECIDE WHICH SPINE SHOULD CONTAIN OVERLAP
     Path path = overlapPath(s1.getValue(), s2.getValue());
     List<Point> slabs = path.toSlabs(false);
-
     Pair<Point, Edge> ref1 = s1.getValue().closestEdge(s1.getKey());
     Spine spineToShorten = slabs.contains(ref1.getKey()) ? s2.getValue() : s1.getValue();
 
     // 2. REMOVE OVERLAPPING EDGES FROM SECOND SPINE
-    SpineVertex crossVertex = path.getBegin().isLeaf() ? path.getEnd() : path.getBegin();
-    Edge lastEdge = path.getBegin().isLeaf() ? crossVertex.getOppositeBranch(path.getLastEdge())
+    SpineVertex pathBegin = (SpineVertex) spineToShorten.vertices.floor(path.getBegin());
+    SpineVertex pathEnd = (SpineVertex) spineToShorten.vertices.floor(path.getEnd());
+    SpineVertex crossVertex = pathBegin.isLeaf() ? pathEnd : pathBegin;
+    Edge lastEdge = pathBegin.isLeaf() ? crossVertex.getOppositeBranch(path.getLastEdge())
         : crossVertex.getOppositeBranch(path.getFirstEdge());
     spineToShorten.cutFromEdge(lastEdge, crossVertex.equals(lastEdge.getV1()) ? -1 : 1);
 
@@ -215,7 +218,42 @@ public class Spine extends Graph {
     if (overlapEnds.isEmpty()) {
       throw new IllegalArgumentException("No overlap!");
     } else if (overlapEnds.size() > 2) {
-      throw new IllegalArgumentException("Something goes terribly wrong here");
+      /*-
+       * there is a case where it is possible:
+       *
+       *  *---@---\
+       *     ||    @==@
+       *  *---@---/
+       *
+       * where
+       *   *     is vertex
+       *   - \ / are edges
+       *   @     is common vertex
+       *   = ||  are common edges
+       *
+       * in such case we prioritize PartialWithVertex overlap
+       */
+      Edge lastEdge = overlapEnds.stream().filter(e -> e.getV1().isLeaf() || e.getV2().isLeaf())
+          .findAny().orElse(null);
+      if (lastEdge == null) {
+        throw new IllegalArgumentException("This should not happen");
+      }
+      Vertex begin;
+      if (lastEdge.getV1().isLeaf()) {
+        begin = s1.getE1().equals(lastEdge.getV1()) ? s1.getE1() : s1.getE2();
+      } else {
+        begin = s1.getE1().equals(lastEdge.getV2()) ? s1.getE1() : s1.getE2();
+      }
+      Path path = new Path((SpineVertex) begin,
+          (SpineVertex) begin.getBranches().first().getOppositeVertex(begin),
+          begin.getBranches().first(), begin.getBranches().first());
+
+      Edge newEdge = path.getEnd().getOppositeBranch(path.getLastEdge());
+      while (newEdge != null && s2.edges.floor(newEdge).equals(newEdge)) {
+        path.extendEnd();
+        newEdge = path.getEnd().getOppositeBranch(path.getLastEdge());
+      }
+      return path;
     }
     return s1.findPath(overlapEnds.get(0),
         overlapEnds.size() > 1 ? overlapEnds.get(1) : overlapEnds.get(0));
@@ -513,7 +551,7 @@ public class Spine extends Graph {
     None, Partial, PartialWithVertex, Full,
   }
 
-  class Path {
+  static class Path {
     private SpineVertex begin;
     private SpineVertex end;
     private Edge firstEdge;
