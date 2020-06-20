@@ -13,8 +13,10 @@ import java.awt.Component;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.stream.Collectors;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -326,8 +328,18 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
 
   private class SkeletonPluginCache {
     private int impId;
-    private Hashtable<String, ImagePlus> indexMaps = new Hashtable<>();
-    private Hashtable<String, Skeleton> skeletons = new Hashtable<>();
+    private LinkedHashMap<String, ImagePlus> indexMaps = new LinkedHashMap<String, ImagePlus>() {
+      @Override
+      protected boolean removeEldestEntry(Map.Entry<String, ImagePlus> eldest) {
+        return this.size() > 15;
+      }
+    };
+    private LinkedHashMap<String, Skeleton> skeletons = new LinkedHashMap<String, Skeleton>() {
+      @Override
+      protected boolean removeEldestEntry(Map.Entry<String, Skeleton> eldest) {
+        return this.size() > 15;
+      }
+    };
     public int slice;
     public int channel;
     public int frame;
