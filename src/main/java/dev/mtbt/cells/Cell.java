@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.commons.lang.NotImplementedException;
 import dev.mtbt.Utils;
 import dev.mtbt.imagej.PolygonRoiVerbose;
 import dev.mtbt.util.Pair;
@@ -44,8 +45,7 @@ public class Cell extends AbstractCellCollection implements CellObserverListener
     CellObserver.addListener(this);
   }
 
-  public Cell(int f0, CellFrame first, String family) {
-    this(f0, first);
+  public void setFamily(String family) {
     this.setName(family, 0, 1);
   }
 
@@ -270,21 +270,27 @@ public class Cell extends AbstractCellCollection implements CellObserverListener
       String cellFrameId = pair.getKey().getProperty(PROPERTY_CELL_FRAME_ID);
       int index = this.getIndexByCellFrameId(cellFrameId);
 
+      CellFrame cellFrame1 = this.getFrame(index);
+      CellFrame cellFrame2 = cellFrame1.clone();
+      cellFrame1.fitPolyline(pair.getValue()[0]);
+      cellFrame2.fitPolyline(pair.getValue()[1]);
+      Cell c1 = new Cell(index, cellFrame1);
+      Cell c2 = new Cell(index, cellFrame2);
       if (index > this.getF0()) {
-        CellFrame cellFrame1 = this.getFrame(index);
-        CellFrame cellFrame2 = cellFrame1.clone();
-        cellFrame1.fitPolyline(pair.getValue()[0]);
-        cellFrame2.fitPolyline(pair.getValue()[1]);
-        Cell c1 = new Cell(index, cellFrame1);
-        Cell c2 = new Cell(index, cellFrame2);
         this.clearFuture(index);
         this.setChildren(c1, c2);
-        // update image to redraw rois
-        line.getImage().updateAndDraw();
       } else {
-        IJ.showMessage(
-            "Can't cut first frame of cell, parent cell would have more than 2 children.");
+        try {
+          this.parent.addToCollection(c1);
+          this.parent.addToCollection(c2);
+          this.parent.removeFromCollection(this);
+        } catch (Exception e) {
+          IJ.showMessage(
+              "Can't cut first frame of cell: Parent cell would have more than 2 children.");
+        }
       }
+      // update image to redraw rois
+      line.getImage().updateAndDraw();
     });
   }
 
@@ -342,7 +348,8 @@ public class Cell extends AbstractCellCollection implements CellObserverListener
 
   @Override
   public void addToCollection(AbstractCellCollection cellCollection) {
-    throw new IllegalArgumentException("Leaf of tree structure");
+    throw new NotImplementedException(
+        "Not implemented for Cell class – use `setChildren` instead.");
   }
 
   @Override

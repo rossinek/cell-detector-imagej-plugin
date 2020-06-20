@@ -18,6 +18,9 @@ public class CellCollection extends AbstractCellCollection {
 
   @Override
   public void addToCollection(AbstractCellCollection c) {
+    if (Cell.class.isAssignableFrom(c.getClass())) {
+      ((Cell) c).setFamily(this.getNextFamily());
+    }
     c.setParentCollection(this);
     this.subCollections.add(c);
   }
@@ -65,5 +68,18 @@ public class CellCollection extends AbstractCellCollection {
   public List<Cell> getAllRootCells() {
     return this.subCollections.stream().flatMap(cell -> cell.getCells(cell.getF0()).stream())
         .collect(Collectors.toList());
+  }
+
+  private String getNextFamily() {
+    List<String> families =
+        getAllRootCells().stream().map(c -> c.getFamily()).collect(Collectors.toList());
+    int i = 0;
+    while (true) {
+      String family = "" + (char) ('A' + i);
+      if (!families.contains(family)) {
+        return family;
+      }
+      i++;
+    }
   }
 }

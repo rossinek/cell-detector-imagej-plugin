@@ -86,9 +86,7 @@ public class SkeletonCellDetector extends SkeletonPlugin implements ICellDetecto
     List<Spine> spines = this.performSearch(this.collectSelectedPoints());
     int f0 = this.impPreviewStack.getT();
     for (int index = 0; index < spines.size(); index++) {
-      char character = (char) ('A' + index);
-      this.cellCollection
-          .addToCollection(new Cell(f0, this.spineToCellFrame(spines.get(index)), "" + character));
+      this.cellCollection.addToCollection(new Cell(f0, this.spineToCellFrame(spines.get(index))));
     }
 
     this.updateAndDrawCells();

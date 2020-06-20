@@ -241,10 +241,10 @@ public class Utils {
     double dist = l1.distance(l2);
     int n = (int) Math.ceil(dist / step);
     // step vector
-    double vx = (l2.getX() - l1.getX()) / dist;
-    double vy = (l2.getY() - l1.getY()) / dist;
+    double vx = (l2.getX() - l1.getX());
+    double vy = (l2.getY() - l1.getY());
     for (int i = 1; i < n; i++) {
-      Point2D sample = new Point2D.Double(l1.getX() + vx * i, l1.getY() + vy * i);
+      Point2D sample = new Point2D.Double(l1.getX() + vx * (i / dist), l1.getY() + vy * (i / dist));
       if (predicate.test(sample)) {
         return sample;
       }
