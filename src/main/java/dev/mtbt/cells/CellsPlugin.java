@@ -2,60 +2,68 @@ package dev.mtbt.cells;
 
 import ij.ImageListener;
 import ij.ImagePlus;
-import ij.gui.Plot;
-import ij.gui.ProfilePlot;
-import ij.measure.ResultsTable;
-import ij.plugin.filter.GaussianBlur;
 import ij.plugin.frame.RoiManager;
+import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.Color;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.List;
-import java.util.stream.IntStream;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.DefaultComboBoxModel;
-import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JPanel;
 import org.scijava.command.Command;
-import org.scijava.command.CommandService;
 import org.scijava.command.DynamicCommand;
-import org.scijava.module.ModuleService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.UIService;
-import dev.mtbt.HyperstackHelper;
 import dev.mtbt.ImageJUtils;
 import dev.mtbt.cells.skeleton.SkeletonCellDetector;
 import dev.mtbt.cells.skeleton.SkeletonCellLifeTracker;
-import dev.mtbt.gui.DialogStepper;
-import dev.mtbt.gui.DialogStepperStep;
-import dev.mtbt.gui.RunnableButton;
+import dev.mtbt.gui.DialogStepperActions;
 import dev.mtbt.gui.RunnableCheckBox;
-import dev.mtbt.util.PicksFinder;
+import dev.mtbt.gui.StackWindowWithPanel;
+
+enum CellsPluginStepType {
+  Detector, LifeTracker, Measurements;
+
+  private static CellsPluginStepType[] vals = values();
+
+  public CellsPluginStepType previous() {
+    return vals[(vals.length + this.ordinal() - 1) % vals.length];
+  }
+
+  public CellsPluginStepType next() {
+    return vals[(this.ordinal() + 1) % vals.length];
+  }
+
+  public boolean isFirst() {
+    return this.ordinal() == 0;
+  }
+
+  public boolean isLast() {
+    return this.ordinal() == vals.length - 1;
+  }
+}
+
 
 @Plugin(type = Command.class, menuPath = "Development>Cell detector")
-public class CellsPlugin extends DynamicCommand implements ImageListener, ActionListener {
+public class CellsPlugin extends DynamicCommand implements ImageListener {
   @Parameter
   private ImagePlus imp;
   @Parameter
   private UIService uiService;
 
-  private DialogStepper dialog;
+  private CellsPluginStepType currentStep = CellsPluginStepType.Detector;
+  private ICellsPluginStep currentStepInstance;
+
+  protected ImagePlus impPreviewStack = null;
+  protected StackWindowWithPanel dialog;
+  protected JPanel dialogContent;
+  protected CellsPluginToolbar toolbar;
+  protected DialogStepperActions dialogActions;
+
   private CellCollection cellCollection;
 
-  private JComboBox<String> detectorSelect;
-  final String[] detectorOptions = {"SkeletonCellDetector"};
-  private String detector = detectorOptions[0];
-
-  private JComboBox<String> lifeTrackerSelect;
-  final String[] lifeTrackerOptions = {"SkeletonCellLifeTracker"};
-  private String lifeTracker = lifeTrackerOptions[0];
-
   private RunnableCheckBox showEndpointsCheckBox;
-
-  private JComboBox<String> measurementsCellNameSelect;
 
   @Override
   public void run() {
@@ -63,75 +71,139 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
     if (imp == null)
       return;
 
-    JPanel cardDetection = new JPanel();
-    cardDetection.setLayout(new BoxLayout(cardDetection, BoxLayout.Y_AXIS));
-    detectorSelect = new JComboBox<>(detectorOptions);
-    detectorSelect.setAlignmentX(Component.CENTER_ALIGNMENT);
-    detectorSelect.addActionListener(this);
-    cardDetection.add(detectorSelect);
-    RunnableButton detectorButton = new RunnableButton("Run detector", this::runDetector);
-    detectorButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    cardDetection.add(detectorButton);
+    // JPanel cardDetection = new JPanel();
+    // cardDetection.setLayout(new BoxLayout(cardDetection, BoxLayout.Y_AXIS));
+    // detectorSelect = new JComboBox<>(detectorOptions);
+    // detectorSelect.setAlignmentX(Component.CENTER_ALIGNMENT);
+    // detectorSelect.addActionListener(this);
+    // cardDetection.add(detectorSelect);
+    // RunnableButton detectorButton = new RunnableButton("Run detector", this::runDetector);
+    // detectorButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+    // cardDetection.add(detectorButton);
 
-    JPanel cardLifeTracking = new JPanel();
-    cardLifeTracking.setLayout(new BoxLayout(cardLifeTracking, BoxLayout.Y_AXIS));
-    lifeTrackerSelect = new JComboBox<>(lifeTrackerOptions);
-    lifeTrackerSelect.setAlignmentX(Component.CENTER_ALIGNMENT);
-    lifeTrackerSelect.addActionListener(this);
-    cardLifeTracking.add(lifeTrackerSelect);
-    RunnableButton lifeTrackerButton = new RunnableButton("Run life tracker", this::runLifeTracker);
-    lifeTrackerButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    cardLifeTracking.add(lifeTrackerButton);
+    // JPanel cardLifeTracking = new JPanel();
+    // cardLifeTracking.setLayout(new BoxLayout(cardLifeTracking, BoxLayout.Y_AXIS));
+    // lifeTrackerSelect = new JComboBox<>(lifeTrackerOptions);
+    // lifeTrackerSelect.setAlignmentX(Component.CENTER_ALIGNMENT);
+    // lifeTrackerSelect.addActionListener(this);
+    // cardLifeTracking.add(lifeTrackerSelect);
+    // RunnableButton lifeTrackerButton = new RunnableButton("Run life tracker",
+    // this::runLifeTracker);
+    // lifeTrackerButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+    // cardLifeTracking.add(lifeTrackerButton);
 
-    JPanel cardMeasurements = new JPanel();
-    cardMeasurements.setLayout(new BoxLayout(cardMeasurements, BoxLayout.Y_AXIS));
-    measurementsCellNameSelect = new JComboBox<>();
-    measurementsCellNameSelect.setAlignmentX(Component.CENTER_ALIGNMENT);
-    cardMeasurements.add(measurementsCellNameSelect);
-    RunnableButton measureLengthsButton =
-        new RunnableButton("Measure lengths", this::showLengthsTable);
-    measureLengthsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    cardMeasurements.add(measureLengthsButton);
-    RunnableButton plotLengthsButton = new RunnableButton("Plot lengths", this::plotLengths);
-    plotLengthsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    cardMeasurements.add(plotLengthsButton);
+    // JPanel cardMeasurements = new JPanel();
+    // cardMeasurements.setLayout(new BoxLayout(cardMeasurements, BoxLayout.Y_AXIS));
+    // measurementsCellNameSelect = new JComboBox<>();
+    // measurementsCellNameSelect.setAlignmentX(Component.CENTER_ALIGNMENT);
+    // cardMeasurements.add(measurementsCellNameSelect);
+    // RunnableButton measureLengthsButton =
+    // new RunnableButton("Measure lengths", this::showLengthsTable);
+    // measureLengthsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+    // cardMeasurements.add(measureLengthsButton);
+    // RunnableButton plotLengthsButton = new RunnableButton("Plot lengths", this::plotLengths);
+    // plotLengthsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+    // cardMeasurements.add(plotLengthsButton);
 
-    RunnableButton plotProfileButton = new RunnableButton("Plot profile", this::plotProfile);
-    plotLengthsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    cardMeasurements.add(plotProfileButton);
+    // RunnableButton plotProfileButton = new RunnableButton("Plot profile", this::plotProfile);
+    // plotLengthsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+    // cardMeasurements.add(plotProfileButton);
 
-    this.dialog =
-        new DialogStepper("Main plugin window", this.createSettingsComponent(), this::cleanup);
-    this.dialog.registerStep(new DialogStepperStep(dialog, "Detection", cardDetection));
-    this.dialog.registerStep(new DialogStepperStep(dialog, "LifeTracking", cardLifeTracking));
-    this.dialog.registerStep(new DialogStepperStep(dialog, "Measurements", cardMeasurements, () -> {
-      List<String> cells = CellAnalyzer.getAllGenerationsNames(this.cellCollection);
-      this.measurementsCellNameSelect
-          .setModel(new DefaultComboBoxModel<>(cells.toArray(new String[cells.size()])));
-    }));
-    this.dialog.setVisible(true);
+    // this.dialog =
+    // new DialogStepper("Main plugin window", this.createSettingsComponent(), this::cleanup);
+    // this.dialog.registerStep(new DialogStepperStep(dialog, "Detection", cardDetection));
+    // this.dialog.registerStep(new DialogStepperStep(dialog, "LifeTracking", cardLifeTracking));
+    // this.dialog.registerStep(new DialogStepperStep(dialog, "Measurements", cardMeasurements, ()
+    // -> {
+    // List<String> cells = CellAnalyzer.getAllGenerationsNames(this.cellCollection);
+    // this.measurementsCellNameSelect
+    // .setModel(new DefaultComboBoxModel<>(cells.toArray(new String[cells.size()])));
+    // }));
+    // this.dialog.setVisible(true);
+
+    this.cellCollection = new CellCollection();
+    this.impPreviewStack = this.imp.duplicate();
+
+    JPanel contentPanel = new JPanel();
+    contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+    contentPanel.add(Box.createVerticalStrut(20));
+
+    this.dialogContent = new JPanel();
+    this.dialogContent.setLayout(new BoxLayout(this.dialogContent, BoxLayout.Y_AXIS));
+    addCenteredComponent(contentPanel, this.dialogContent);
+
+    JPanel footerPanel = new JPanel();
+    footerPanel.setLayout(new BoxLayout(footerPanel, BoxLayout.Y_AXIS));
+    this.toolbar = new CellsPluginToolbar();
+    this.dialogActions =
+        new DialogStepperActions(this::previousStep, this::nextStep, this::cleanup);
+    addCenteredComponent(footerPanel, this.toolbar);
+    addCenteredComponent(footerPanel, createSettingsComponent());
+    addCenteredComponent(footerPanel, this.dialogActions);
+
+    this.dialog = new StackWindowWithPanel(this.impPreviewStack);
+    this.dialog.getSidePanel().add(contentPanel, BorderLayout.NORTH);
+    this.dialog.getSidePanel().add(footerPanel, BorderLayout.SOUTH);
+    this.updateStep();
+    this.dialog.pack();
   }
 
-  private Component createSettingsComponent() {
+  private void previousStep() {
+    if (!this.currentStep.isFirst()) {
+      this.currentStep = this.currentStep.previous();
+      this.dialogActions.setIsFirst(this.currentStep.isFirst());
+      this.dialogActions.setIsLast(this.currentStep.isLast());
+      this.updateStep();
+    }
+  }
+
+  private void nextStep() {
+    if (!this.currentStep.isLast()) {
+      this.currentStep = this.currentStep.next();
+      this.dialogActions.setIsFirst(this.currentStep.isFirst());
+      this.dialogActions.setIsLast(this.currentStep.isLast());
+      this.updateStep();
+    }
+  }
+
+  private void updateStep() {
+    if (this.currentStepInstance != null) {
+      this.currentStepInstance.cleanup();
+    }
+    switch (this.currentStep) {
+      case Detector:
+        this.currentStepInstance = new SkeletonCellDetector();
+        break;
+      case LifeTracker:
+        this.currentStepInstance = new SkeletonCellLifeTracker();
+        break;
+      case Measurements:
+        this.currentStepInstance = new StepMeasurements();
+        break;
+    }
+    this.dialogContent.removeAll();
+    JComponent content = this.currentStepInstance.init(this.impPreviewStack, this.cellCollection);
+    this.dialogContent.add(content);
+    this.dialog.pack();
+  }
+
+  protected void addCenteredComponent(JPanel panel, JComponent component) {
+    component.setAlignmentX(Component.CENTER_ALIGNMENT);
+    panel.add(component);
+  }
+
+  private JComponent createSettingsComponent() {
     Box settingsBox = new Box(BoxLayout.X_AXIS);
     this.showEndpointsCheckBox = new RunnableCheckBox("show endpoints", this::preview);
     settingsBox.add(showEndpointsCheckBox);
     return settingsBox;
   }
 
-  @Override
-  public void actionPerformed(ActionEvent e) {
-    Object source = e.getSource();
-    if (source == this.detectorSelect) {
-      this.detector = (String) this.detectorSelect.getSelectedItem();
-    } else if (source == this.lifeTrackerSelect) {
-      this.lifeTracker = (String) this.lifeTrackerSelect.getSelectedItem();
-    }
-  }
-
   public void preview() {
+    if (this.impPreviewStack == null)
+      return;
     this.displayCells();
-    this.imp.updateAndDraw();
+    this.impPreviewStack.updateAndDraw();
   }
 
   private void cleanup() {
@@ -144,172 +216,9 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
     roiManager.reset();
   }
 
-  protected void runDetector() {
-    if (detector == null) {
-      uiService.showDialog("Select detector first");
-      return;
-    }
-    Thread t = new Thread(() -> {
-      try {
-        final ModuleService ms = this.getContext().service(ModuleService.class);
-        final CommandService cs = this.getContext().service(CommandService.class);
-        ICellDetector cellDetector;
-        switch (detector) {
-          case "SkeletonCellDetector":
-            cellDetector =
-                (ICellDetector) ms.run(cs.getCommand(SkeletonCellDetector.class), true).get();
-            break;
-          default:
-            uiService.showDialog("No such detector");
-            return;
-        }
-        if (this.cellCollection != null) {
-          this.cellCollection.destroy();
-        }
-        this.cellCollection = cellDetector.output().get();
-        this.onDetectionEnd();
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    });
-    t.start();
-  }
-
-  protected void runLifeTracker() {
-    if (lifeTracker == null) {
-      uiService.showDialog("Select life tracker first");
-      return;
-    }
-    Thread t = new Thread(() -> {
-      try {
-        final ModuleService ms = this.getContext().service(ModuleService.class);
-        final CommandService cs = this.getContext().service(CommandService.class);
-        ICellLifeTracker cellLifeTracker;
-        switch (lifeTracker) {
-          case "SkeletonCellLifeTracker":
-            cellLifeTracker =
-                (ICellLifeTracker) ms.run(cs.getCommand(SkeletonCellLifeTracker.class), true).get();
-            break;
-          default:
-            uiService.showDialog("No such life tracker");
-            return;
-        }
-        cellLifeTracker.init(this.cellCollection);
-        cellLifeTracker.output().get();
-        this.onLifeTrackingEnd();
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    });
-    t.start();
-  }
-
-  protected void showLengthsTable() {
-    String cellName = (String) this.measurementsCellNameSelect.getSelectedItem();
-    Cell cell = CellAnalyzer.getCellByName(this.cellCollection, cellName);
-    this.measureLengths(cell).show("Lengths table");
-  }
-
-  protected ResultsTable measureLengths(Cell cell) {
-    ResultsTable table = new ResultsTable();
-    for (CellFrame frame : cell.getFrames()) {
-      table.incrementCounter();
-      table.addValue("Length", frame.getLength());
-    }
-    return table;
-  }
-
-  protected void plotLengths() {
-    String cellName = (String) this.measurementsCellNameSelect.getSelectedItem();
-    Cell cell = CellAnalyzer.getCellByName(this.cellCollection, cellName);
-    ResultsTable table = this.measureLengths(cell);
-
-    table.getColumnAsDoubles(0);
-    double[] frames =
-        IntStream.range(cell.getF0(), cell.getFN()).mapToDouble(i -> (double) i).toArray();
-    Plot plot = new Plot("Length plot", "Frame index", "Length");
-    plot.add("line", frames, table.getColumnAsDoubles(0));
-    plot.show();
-  }
-
-  protected void plotProfile() {
-    String cellName = (String) this.measurementsCellNameSelect.getSelectedItem();
-    Cell cell = CellAnalyzer.getCellByName(this.cellCollection, cellName);
-    Plot plot = new Plot("Profile maxima in time", "Frame index", "Position on the body (0-1)");
-    plot.setColor(Color.BLACK);
-    plot.addLabel(0.001, 0, "     low intensity");
-    plot.setColor(Color.getHSBColor(0.16f, 1f, 0.9f));
-    plot.addLabel(0, 0, "■");
-    plot.setColor(Color.BLACK);
-    plot.addLabel(0.251, 0, "     high intensity");
-    plot.setColor(Color.RED);
-    plot.addLabel(0.25, 0, "■");
-    int f0 = cell.getF0();
-    int fN = cell.getFN();
-    int nFrames = fN - f0;
-    Plot[] picksPlots = new Plot[nFrames];
-    float maxValue = Float.NEGATIVE_INFINITY;
-    float minValue = Float.POSITIVE_INFINITY;
-    for (int frame = f0; frame < fN; frame++) {
-      ImagePlus frameImp =
-          HyperstackHelper.extractFrame(imp, imp.getChannel(), imp.getSlice(), frame);
-      new GaussianBlur().blurGaussian(frameImp.getProcessor(), 2.0);
-      frameImp.setRoi(cell.toRoi(frame));
-      ProfilePlot profile = new ProfilePlot(frameImp);
-      Plot profilePlot = new Plot("", "", "");
-      double[] yValues = profile.getProfile();
-      int n = yValues.length;
-      double[] xValues = new double[n];
-      for (int i = 0; i < n; i++) {
-        xValues[i] = i / (double) n;
-      }
-      profilePlot.add("line", xValues, yValues);
-      picksPlots[frame - f0] = PicksFinder.findPicks(profilePlot);
-
-      float[] floatPicksYValues = picksPlots[frame - f0].getYValues();
-      if (floatPicksYValues.length > 0) {
-        double max = IntStream.range(0, floatPicksYValues.length)
-            .mapToDouble(i -> floatPicksYValues[i]).max().getAsDouble();
-        double min = IntStream.range(0, floatPicksYValues.length)
-            .mapToDouble(i -> floatPicksYValues[i]).min().getAsDouble();
-        maxValue = Math.max(maxValue, (float) max);
-        minValue = Math.min(minValue, (float) min);
-      }
-    }
-
-    float valuesRange = maxValue - minValue;
-
-    for (int i = 0; i < nFrames; i++) {
-      Plot picksPlot = picksPlots[i];
-      float[] floatPicksXValues = picksPlot.getXValues();
-      float[] floatPicksYValues = picksPlot.getYValues();
-      double x = i + f0;
-      for (int pi = 0; pi < floatPicksXValues.length; pi++) {
-        double y = floatPicksXValues[pi];
-        float hue = 0.16f * (1 - ((floatPicksYValues[pi] - minValue) / valuesRange));
-        plot.setColor(Color.getHSBColor(hue, 1f, 1f));
-        plot.add("circle", new double[] {x}, new double[] {y});
-      }
-    }
-    plot.show();
-    plot.setLimits(f0 - 0.5, fN - 0.5, 0, 1);
-  }
-
   protected void showFirstFrameWithCells() {
     int frame = this.cellCollection.isEmpty() ? 1 : this.cellCollection.getF0();
-    this.imp.setT(frame);
-  }
-
-  protected void onDetectionEnd() {
-    this.dialog.getCurrentStep().setFinished(true);
-    this.showFirstFrameWithCells();
-    this.preview();
-  }
-
-  protected void onLifeTrackingEnd() {
-    this.dialog.getCurrentStep().setFinished(true);
-    this.showFirstFrameWithCells();
-    this.preview();
+    this.impPreviewStack.setT(frame);
   }
 
   private void displayCells() {
@@ -319,7 +228,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
     roiManager.reset();
     roiManager.runCommand("show all with labels");
     roiManager.runCommand("usenames", "true");
-    int frame = this.imp.getFrame();
+    int frame = this.impPreviewStack.getFrame();
     List<Cell> currentCells = cellCollection.getCells(frame);
     currentCells.stream().forEach(cell -> roiManager.addRoi(cell.getObservedRoi(frame)));
     if (this.showEndpointsCheckBox.isSelected()) {
@@ -330,18 +239,20 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, Action
   }
 
   @Override
-  public void imageOpened(ImagePlus imp) {
+  public void imageOpened(ImagePlus image) {
     // Ignore
   }
 
   @Override
-  public void imageClosed(ImagePlus imp) {
-    // Ignore
+  public void imageClosed(ImagePlus image) {
+    if (image == this.impPreviewStack && this.cellCollection != null) {
+      this.cellCollection.destroy();
+    }
   }
 
   @Override
   public void imageUpdated(ImagePlus image) {
-    if (image == this.imp) {
+    if (image == this.impPreviewStack) {
       this.displayCells();
     }
   }

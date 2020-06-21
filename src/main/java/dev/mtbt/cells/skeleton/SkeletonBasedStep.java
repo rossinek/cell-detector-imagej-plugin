@@ -8,24 +8,18 @@ import ij.plugin.frame.RoiManager;
 import ij.process.FloatProcessor;
 
 import java.awt.Point;
-import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
-import java.util.Hashtable;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.stream.Collectors;
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import org.scijava.command.DynamicCommand;
-import org.scijava.plugin.Parameter;
-import org.scijava.ui.UIService;
 import dev.mtbt.HyperstackHelper;
 import dev.mtbt.ImageJUtils;
 import dev.mtbt.Utils;
@@ -33,56 +27,40 @@ import dev.mtbt.cells.CellCollection;
 import dev.mtbt.cells.CellFrame;
 import dev.mtbt.cells.PolylineCellFrame;
 import dev.mtbt.graph.Vertex;
-import dev.mtbt.gui.DialogActions;
 import dev.mtbt.gui.ExpandablePanel;
 import dev.mtbt.gui.RunnableCheckBox;
 import dev.mtbt.gui.RunnableSpinner;
-import dev.mtbt.gui.StackWindowWithPanel;
 import dev.mtbt.util.Pair;
 import dev.mtbt.vendor.shapeindex.ShapeIndexMap;
 
-public abstract class SkeletonPlugin extends DynamicCommand implements ImageListener {
+public abstract class SkeletonBasedStep {
   static private SkeletonPluginCache cache;
 
-  @Parameter
   protected ImagePlus imp;
-
-  @Parameter
-  protected UIService uiService;
-
-  protected ImagePlus impPreviewStack = null;
-  protected StackWindowWithPanel dialog;
+  protected CellCollection cellCollection;
   protected JPanel dialogContent;
+
   protected RunnableSpinner blurRadiusSlider;
   protected RunnableSpinner thresholdSlider;
   protected RunnableCheckBox shapeIndexCheckBox;
   protected RunnableCheckBox skeletonCheckBox;
-  protected DialogActions dialogActions;
-  protected SkeletonPluginToolbar toolbar;
 
-  protected CellCollection cellCollection = null;
-
-  boolean initialized = false;
-
-  @Override
-  public void run() {
-    this.initComponents();
-    this.preview();
+  protected SkeletonBasedStep() {
   }
 
-  protected boolean initComponents() {
-    if (this.initialized || this.imp == null) {
-      return false;
+  protected JComponent init(ImagePlus imp, CellCollection collection) {
+    if (this.dialogContent != null) {
+      throw new IllegalAccessError("Already initialized");
     }
-    ImagePlus.addImageListener(this);
-    this.impPreviewStack = this.imp.duplicate();
+    this.imp = imp;
+    this.cellCollection = collection;
 
-    if (SkeletonPlugin.cache == null || !SkeletonPlugin.cache.isTarget(this.imp)) {
-      SkeletonPlugin.cache = new SkeletonPluginCache(this.imp);
+    if (SkeletonBasedStep.cache == null || !SkeletonBasedStep.cache.isTarget(this.imp)) {
+      SkeletonBasedStep.cache = new SkeletonPluginCache(this.imp);
     } else {
-      this.impPreviewStack.setSlice(SkeletonPlugin.cache.slice);
-      this.impPreviewStack.setC(SkeletonPlugin.cache.channel);
-      this.impPreviewStack.setT(SkeletonPlugin.cache.frame);
+      this.imp.setSlice(SkeletonBasedStep.cache.slice);
+      this.imp.setC(SkeletonBasedStep.cache.channel);
+      this.imp.setT(SkeletonBasedStep.cache.frame);
     }
 
     this.dialogContent = new JPanel();
@@ -102,25 +80,12 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
     this.skeletonCheckBox = new RunnableCheckBox("show skeleton", this::preview);
     addCenteredComponent(advancedPanel, this.skeletonCheckBox);
 
-    this.dialogContent.add(Box.createVerticalStrut(20));
     ExpandablePanel expandablePanel =
-        new ExpandablePanel("advanced settings >>", advancedPanel, () -> this.dialog.pack());
+        new ExpandablePanel("advanced settings >>", advancedPanel, () -> {
+          // this.dialog.pack()
+        });
     addCenteredComponent(this.dialogContent, expandablePanel);
-
-    JPanel footerPanel = new JPanel();
-    footerPanel.setLayout(new BoxLayout(footerPanel, BoxLayout.Y_AXIS));
-    this.toolbar = new SkeletonPluginToolbar();
-    this.dialogActions = new DialogActions(this::done, this::cleanup);
-    addCenteredComponent(footerPanel, this.toolbar);
-    addCenteredComponent(footerPanel, this.dialogActions);
-
-    this.dialog = new StackWindowWithPanel(this.impPreviewStack);
-    this.dialog.getSidePanel().add(this.dialogContent, BorderLayout.NORTH);
-    this.dialog.getSidePanel().add(footerPanel, BorderLayout.SOUTH);
-    this.dialog.pack();
-
-    this.initialized = true;
-    return true;
+    return this.dialogContent;
   }
 
   protected void addCenteredComponent(JPanel panel, JComponent component) {
@@ -129,9 +94,9 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
   }
 
   private String getIndexMapId() {
-    int slice = this.impPreviewStack.getSlice();
-    int channel = this.impPreviewStack.getChannel();
-    int frame = this.impPreviewStack.getT();
+    int slice = this.imp.getSlice();
+    int channel = this.imp.getChannel();
+    int frame = this.imp.getT();
     double blur = (double) blurRadiusSlider.getValue();
     return slice + ";" + channel + ";" + frame + ";" + blur;
   }
@@ -143,10 +108,10 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
 
   protected Skeleton getSkeleton() {
     String sId = this.getSkeletonId();
-    Skeleton skeleton = SkeletonPlugin.cache.getSkeleton(sId);
+    Skeleton skeleton = SkeletonBasedStep.cache.getSkeleton(sId);
     if (skeleton == null) {
       skeleton = new Skeleton(this.getShapeIndexMap().duplicate());
-      SkeletonPlugin.cache.setSkeleton(sId, skeleton);
+      SkeletonBasedStep.cache.setSkeleton(sId, skeleton);
     }
     return skeleton;
   }
@@ -154,10 +119,10 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
   private ImagePlus getShapeIndexMap() {
     String simId = this.getIndexMapId();
     double blur = (double) blurRadiusSlider.getValue();
-    ImagePlus indexMap = SkeletonPlugin.cache.getIndexMap(simId);
+    ImagePlus indexMap = SkeletonBasedStep.cache.getIndexMap(simId);
     if (indexMap == null) {
       indexMap = ShapeIndexMap.getShapeIndexMap(this.getOriginalFrame(), blur);
-      SkeletonPlugin.cache.setIndexMap(simId, indexMap);
+      SkeletonBasedStep.cache.setIndexMap(simId, indexMap);
     }
     return thresholdShapeIndexMap(indexMap);
   }
@@ -174,47 +139,41 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
   }
 
   protected ImagePlus getOriginalFrame() {
-    return HyperstackHelper.extractFrame(imp, this.impPreviewStack.getChannel(),
-        this.impPreviewStack.getSlice(), this.impPreviewStack.getT());
+    return HyperstackHelper.extractFrame(imp, this.imp.getChannel(), this.imp.getSlice(),
+        this.imp.getT());
   }
 
   private void showImageOverlay(ImagePlus overlay) {
     ImageRoi roi = new ImageRoi(0, 0, overlay.getProcessor());
     roi.setName("__image-overlay__");
-    Overlay overlayList = this.impPreviewStack.getOverlay();
+    Overlay overlayList = this.imp.getOverlay();
     if (overlayList == null) {
       overlayList = new Overlay();
     }
     overlayList.add(roi);
-    this.impPreviewStack.setOverlay(overlayList);
+    this.imp.setOverlay(overlayList);
   }
 
   private void removeImageOverlay() {
-    Overlay overlayList = this.impPreviewStack.getOverlay();
+    Overlay overlayList = this.imp.getOverlay();
     if (overlayList != null) {
       overlayList.remove("__image-overlay__");
-      this.impPreviewStack.setOverlay(overlayList);
+      this.imp.setOverlay(overlayList);
     }
   }
 
   public void preview() {
-    if (this.initialized) {
-      this.updateAndDrawCells();
-      this.removeImageOverlay();
-      if (this.skeletonCheckBox.isSelected()) {
-        showImageOverlay(this.getSkeleton().toImagePlus());
-      } else if (this.shapeIndexCheckBox.isSelected()) {
-        showImageOverlay(getShapeIndexMap());
-      }
+    // this.updateAndDrawCells();
+    this.removeImageOverlay();
+    if (this.skeletonCheckBox.isSelected()) {
+      showImageOverlay(this.getSkeleton().toImagePlus());
+    } else if (this.shapeIndexCheckBox.isSelected()) {
+      showImageOverlay(getShapeIndexMap());
     }
   }
 
-  protected void done() {
-    cleanup();
-  }
-
-  protected void cleanup() {
-    impPreviewStack.close();
+  public void cleanup() {
+    imp.setOverlay(null);
   }
 
   protected Spine performSearch(Point point) {
@@ -298,32 +257,17 @@ public abstract class SkeletonPlugin extends DynamicCommand implements ImageList
   }
 
   protected void updateAndDrawCells() {
-    if (this.cellCollection != null) {
-      RoiManager roiManager = ImageJUtils.getRoiManager();
-      roiManager.reset();
-      this.cellCollection.getCells(this.impPreviewStack.getT()).stream()
-          .map(cell -> cell.getObservedRoi(this.impPreviewStack.getT())).filter(roi -> roi != null)
-          .forEach(roi -> roiManager.addRoi(roi));
-      roiManager.runCommand("show all");
-    }
+    RoiManager roiManager = ImageJUtils.getRoiManager();
+    roiManager.reset();
+    this.cellCollection.getCells(this.imp.getT()).stream()
+        .map(cell -> cell.getObservedRoi(this.imp.getT())).filter(roi -> roi != null)
+        .forEach(roi -> roiManager.addRoi(roi));
+    roiManager.runCommand("show all");
   }
 
-  @Override
-  public void imageOpened(ImagePlus imp) {
-    // Ignore
-  }
-
-  @Override
-  public void imageClosed(ImagePlus imp) {
-    // Ignore
-  }
-
-  @Override
-  public void imageUpdated(ImagePlus image) {
-    if (image == this.impPreviewStack) {
-      this.preview();
-      SkeletonPlugin.cache.updateCache(this.impPreviewStack);
-    }
+  public void imageUpdated() {
+    this.preview();
+    SkeletonBasedStep.cache.updateCache(this.imp);
   }
 
   private class SkeletonPluginCache {

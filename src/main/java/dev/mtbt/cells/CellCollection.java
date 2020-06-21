@@ -62,6 +62,10 @@ public class CellCollection extends AbstractCellCollection {
   @Override
   public void destroy() {
     super.destroy();
+    this.clear();
+  }
+
+  public void clear() {
     new ArrayList<>(this.subCollections).forEach(c -> c.destroy());
   }
 

@@ -1,4 +1,4 @@
-package dev.mtbt.cells.skeleton;
+package dev.mtbt.cells;
 
 import java.awt.Color;
 import java.awt.event.ActionEvent;
@@ -12,12 +12,11 @@ import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 import javax.swing.JToggleButton;
 import javax.swing.border.Border;
-import dev.mtbt.cells.CellObserver;
 import dev.mtbt.gui.ClearableButtonGroup;
 import ij.IJ;
 import ij.IJEventListener;
 
-public class SkeletonPluginToolbar extends JPanel implements ActionListener, IJEventListener {
+public class CellsPluginToolbar extends JPanel implements ActionListener, IJEventListener {
   Consumer<String> listener;
   ClearableButtonGroup buttonGroup;
   List<JToggleButton> buttons = new ArrayList<>();
@@ -30,13 +29,13 @@ public class SkeletonPluginToolbar extends JPanel implements ActionListener, IJE
       BorderFactory.createLineBorder(Color.RED, 2), BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
 
-  public SkeletonPluginToolbar() {
+  public CellsPluginToolbar() {
     this((cmd) -> {
       // ignore
     });
   }
 
-  public SkeletonPluginToolbar(Consumer<String> listener) {
+  public CellsPluginToolbar(Consumer<String> listener) {
     super();
     this.listener = listener;
     this.buttonGroup = new ClearableButtonGroup();

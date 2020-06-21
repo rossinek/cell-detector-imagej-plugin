@@ -5,10 +5,12 @@ import dev.mtbt.Utils;
 import dev.mtbt.cells.Cell;
 import dev.mtbt.cells.CellCollection;
 import dev.mtbt.cells.CellFrame;
-import dev.mtbt.cells.ICellLifeTracker;
+import dev.mtbt.cells.ICellsPluginStep;
 import dev.mtbt.gui.RunnableButton;
 import dev.mtbt.gui.RunnableSpinner;
 import dev.mtbt.util.Pair;
+import ij.IJ;
+import ij.ImagePlus;
 import ij.plugin.frame.RoiManager;
 import java.awt.ComponentOrientation;
 import java.awt.FlowLayout;
@@ -20,15 +22,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import javax.swing.Box;
 import javax.swing.JPanel;
-import org.scijava.command.Command;
-import org.scijava.plugin.Plugin;
 
-@Plugin(type = Command.class, menuPath = "Development>Skeleton>Manual Cell Life Tracker")
-public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLifeTracker {
+public class SkeletonCellLifeTracker extends SkeletonBasedStep implements ICellsPluginStep {
 
   private RunnableButton previousFrameButton;
   private RunnableButton duplicateNextFrameButton;
@@ -38,17 +36,8 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
   CompletableFuture<Void> result = new CompletableFuture<>();
 
   @Override
-  public void init(CellCollection cellCollection) {
-    this.cellCollection = cellCollection;
-    this.run();
-    this.showFirstFrameWithCells();
-  }
-
-  @Override
-  public void run() {
-    if (this.cellCollection == null || !super.initComponents()) {
-      return;
-    }
+  public JPanel init(ImagePlus imp, CellCollection cellCollection) {
+    super.init(imp, cellCollection);
 
     JPanel buttonsPanel = new JPanel();
     buttonsPanel.setLayout(new FlowLayout());
@@ -75,45 +64,49 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
     dialogContent.add(Box.createVerticalStrut(20));
     addCenteredComponent(dialogContent, buttonsPanel);
 
-    this.dialog.pack();
+    // this.dialog.pack();
+    this.showFirstFrameWithCells();
     this.preview();
+
+    return this.dialogContent;
   }
 
   @Override
-  public Future<Void> output() {
-    return this.result;
+  public void imageUpdated() {
+    super.imageUpdated();
+  }
+
+  @Override
+  public void cleanup() {
+    super.cleanup();
   }
 
   protected void showFirstFrameWithCells() {
     int frame = this.cellCollection.isEmpty() ? 1 : this.cellCollection.getF0();
-    this.impPreviewStack.setT(frame);
+    this.imp.setT(frame);
   }
 
   protected void onPreviousFrameClick() {
-    int frame = this.impPreviewStack.getT();
+    int frame = this.imp.getT();
     if (frame > 1) {
-      this.impPreviewStack.setT(frame - 1);
+      this.imp.setT(frame - 1);
     }
   }
 
   protected void onDuplicateNextFrameClick() {
-    if (this.cellCollection == null) {
-      this.uiService.showDialog("There are no cells to track");
-      return;
-    }
-    int f0 = this.impPreviewStack.getT();
+    int f0 = this.imp.getT();
     List<Cell> cells = this.cellCollection.getCells(f0);
     if (cells.size() < 1) {
-      this.uiService.showDialog("There are no cells in current frame");
+      IJ.showMessage("There are no cells in current frame");
       return;
     }
     cells.forEach(cell -> cell.clearFuture(f0 + 1));
     int index = f0 + 1;
-    if (index > this.impPreviewStack.getNFrames()) {
+    if (index > this.imp.getNFrames()) {
       return;
     }
     cells.forEach(cell -> cell.setFrame(index, cell.getFrame(index - 1).clone()));
-    this.impPreviewStack.setT(index);
+    this.imp.setT(index);
   }
 
   protected void onCalculateNextFramesClick() {
@@ -123,24 +116,20 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
   }
 
   protected void calculateNextFrame() {
-    if (this.cellCollection == null) {
-      this.uiService.showDialog("There are no cells to track");
-      return;
-    }
-    int f0 = this.impPreviewStack.getT();
+    int f0 = this.imp.getT();
     List<Cell> cells = this.cellCollection.getCells(f0);
     if (cells.size() < 1) {
-      this.uiService.showDialog("There are no cells in current frame");
+      IJ.showMessage("There are no cells in current frame");
       return;
     }
     cells.forEach(cell -> cell.clearFuture(f0 + 1));
     int index = f0 + 1;
-    if (index > this.impPreviewStack.getNFrames()) {
+    if (index > this.imp.getNFrames()) {
       return;
     }
     cells = this.cellCollection.getCells(index - 1);
     final int frameIndex = index;
-    this.impPreviewStack.setT(frameIndex);
+    this.imp.setT(frameIndex);
     this.preview();
 
     HashMap<Cell, List<Pair<Point2D, Spine>>> successors = new HashMap<>();
@@ -248,21 +237,5 @@ public class SkeletonCellLifeTracker extends SkeletonPlugin implements ICellLife
           (acc, candidate) -> acc + point2d.distance(candidate), (v0, v1) -> v0 + v1);
       return new Pair<>(new Pair<>(point2d, spine), score);
     }).min((s0, s1) -> Double.compare(s0.getValue(), s1.getValue())).get().getKey();
-  }
-
-  protected void done() {
-    super.done();
-    result.complete(null);
-  }
-
-  protected void updateAndDrawCells() {
-    if (this.cellCollection != null) {
-      RoiManager roiManager = ImageJUtils.getRoiManager();
-      roiManager.reset();
-      this.cellCollection.getCells(this.impPreviewStack.getT()).stream()
-          .map(cell -> cell.getObservedRoi(this.impPreviewStack.getT())).filter(roi -> roi != null)
-          .forEach(roi -> roiManager.addRoi(roi));
-      roiManager.runCommand("show all");
-    }
   }
 }
