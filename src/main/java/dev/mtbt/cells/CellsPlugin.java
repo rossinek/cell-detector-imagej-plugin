@@ -71,58 +71,9 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
     if (imp == null)
       return;
 
-    // JPanel cardDetection = new JPanel();
-    // cardDetection.setLayout(new BoxLayout(cardDetection, BoxLayout.Y_AXIS));
-    // detectorSelect = new JComboBox<>(detectorOptions);
-    // detectorSelect.setAlignmentX(Component.CENTER_ALIGNMENT);
-    // detectorSelect.addActionListener(this);
-    // cardDetection.add(detectorSelect);
-    // RunnableButton detectorButton = new RunnableButton("Run detector", this::runDetector);
-    // detectorButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    // cardDetection.add(detectorButton);
-
-    // JPanel cardLifeTracking = new JPanel();
-    // cardLifeTracking.setLayout(new BoxLayout(cardLifeTracking, BoxLayout.Y_AXIS));
-    // lifeTrackerSelect = new JComboBox<>(lifeTrackerOptions);
-    // lifeTrackerSelect.setAlignmentX(Component.CENTER_ALIGNMENT);
-    // lifeTrackerSelect.addActionListener(this);
-    // cardLifeTracking.add(lifeTrackerSelect);
-    // RunnableButton lifeTrackerButton = new RunnableButton("Run life tracker",
-    // this::runLifeTracker);
-    // lifeTrackerButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    // cardLifeTracking.add(lifeTrackerButton);
-
-    // JPanel cardMeasurements = new JPanel();
-    // cardMeasurements.setLayout(new BoxLayout(cardMeasurements, BoxLayout.Y_AXIS));
-    // measurementsCellNameSelect = new JComboBox<>();
-    // measurementsCellNameSelect.setAlignmentX(Component.CENTER_ALIGNMENT);
-    // cardMeasurements.add(measurementsCellNameSelect);
-    // RunnableButton measureLengthsButton =
-    // new RunnableButton("Measure lengths", this::showLengthsTable);
-    // measureLengthsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    // cardMeasurements.add(measureLengthsButton);
-    // RunnableButton plotLengthsButton = new RunnableButton("Plot lengths", this::plotLengths);
-    // plotLengthsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    // cardMeasurements.add(plotLengthsButton);
-
-    // RunnableButton plotProfileButton = new RunnableButton("Plot profile", this::plotProfile);
-    // plotLengthsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    // cardMeasurements.add(plotProfileButton);
-
-    // this.dialog =
-    // new DialogStepper("Main plugin window", this.createSettingsComponent(), this::cleanup);
-    // this.dialog.registerStep(new DialogStepperStep(dialog, "Detection", cardDetection));
-    // this.dialog.registerStep(new DialogStepperStep(dialog, "LifeTracking", cardLifeTracking));
-    // this.dialog.registerStep(new DialogStepperStep(dialog, "Measurements", cardMeasurements, ()
-    // -> {
-    // List<String> cells = CellAnalyzer.getAllGenerationsNames(this.cellCollection);
-    // this.measurementsCellNameSelect
-    // .setModel(new DefaultComboBoxModel<>(cells.toArray(new String[cells.size()])));
-    // }));
-    // this.dialog.setVisible(true);
-
     this.cellCollection = new CellCollection();
     this.impPreviewStack = this.imp.duplicate();
+    CellObserver.setObservedImage(this.impPreviewStack);
 
     JPanel contentPanel = new JPanel();
     contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
@@ -222,6 +173,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
   }
 
   private void displayCells() {
+    CellObserver.removeListeners();
     if (this.cellCollection == null)
       return;
     RoiManager roiManager = ImageJUtils.getRoiManager();
@@ -230,6 +182,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
     roiManager.runCommand("usenames", "true");
     int frame = this.impPreviewStack.getFrame();
     List<Cell> currentCells = cellCollection.getCells(frame);
+    currentCells.forEach(cell -> CellObserver.addListener(cell));
     currentCells.stream().forEach(cell -> roiManager.addRoi(cell.getObservedRoi(frame)));
     if (this.showEndpointsCheckBox.isSelected()) {
       currentCells.stream()
@@ -240,7 +193,6 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
 
   @Override
   public void imageOpened(ImagePlus image) {
-    // Ignore
   }
 
   @Override

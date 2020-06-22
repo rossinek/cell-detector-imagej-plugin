@@ -42,7 +42,6 @@ public class Cell extends AbstractCellCollection implements CellObserverListener
   public Cell(int f0, CellFrame first) {
     this.f0 = f0;
     this.frames.add(first);
-    CellObserver.addListener(this);
   }
 
   public void setFamily(String family) {

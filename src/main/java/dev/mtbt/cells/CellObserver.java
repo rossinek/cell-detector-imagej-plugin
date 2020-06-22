@@ -1,7 +1,8 @@
 package dev.mtbt.cells;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import dev.mtbt.imagej.RoiObserver;
 import dev.mtbt.imagej.RoiObserverListener;
 import ij.IJ;
@@ -17,9 +18,14 @@ public class CellObserver {
   static public final String TOOL_CUT = "line", TOOL_ERASE = "brush";
 
   static private final EventsListener eventsListenerInstance = new EventsListener();
-  static private final List<CellObserverListener> listeners = new ArrayList<>();
+  static private final Set<CellObserverListener> listeners = new HashSet<>();
 
+  static private ImagePlus observedImage;
   static private String activeTool = null;
+
+  static public void setObservedImage(ImagePlus imp) {
+    observedImage = imp;
+  }
 
   static public void addListener(CellObserverListener listener) {
     listeners.add(listener);
@@ -27,6 +33,10 @@ public class CellObserver {
 
   static public void removeListener(CellObserverListener listener) {
     listeners.remove(listener);
+  }
+
+  static public void removeListeners() {
+    listeners.clear();
   }
 
   static public EventsListener getEventsListenerInstance() {
@@ -41,10 +51,10 @@ public class CellObserver {
     if (tool != null) {
       switch (tool) {
         case CellObserver.TOOL_CUT:
-          IJ.setTool("line");
+          IJ.setTool(CellObserver.TOOL_CUT);
           break;
         case CellObserver.TOOL_ERASE:
-          IJ.setTool("brush");
+          IJ.setTool(CellObserver.TOOL_ERASE);
           break;
       }
     }
@@ -86,7 +96,10 @@ public class CellObserver {
 
     @Override
     public void roiModified(Roi modifiedRoi, int id) {
-      CellObserver.notify(modifiedRoi, id);
+      if (CellObserver.observedImage != null
+          && modifiedRoi.getImage() == CellObserver.observedImage) {
+        CellObserver.notify(modifiedRoi, id);
+      }
     }
   }
 }

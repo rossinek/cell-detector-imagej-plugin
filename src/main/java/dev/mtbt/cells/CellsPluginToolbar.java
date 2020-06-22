@@ -31,7 +31,6 @@ public class CellsPluginToolbar extends JPanel implements ActionListener, IJEven
 
   public CellsPluginToolbar() {
     this((cmd) -> {
-      // ignore
     });
   }
 

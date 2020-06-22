@@ -103,33 +103,26 @@ public class RoiObserver {
 
     @Override
     public void mouseClicked(MouseEvent e) {
-      // ignore
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
-      // ignore
     }
 
     @Override
     public void mouseEntered(MouseEvent e) {
-      // ignore
     }
 
     @Override
     public void mouseExited(MouseEvent e) {
-      // ignore
     }
 
     @Override
     public void imageClosed(ImagePlus imp) {
-      // ignore
     }
 
     @Override
     public void imageUpdated(ImagePlus imp) {
-      // ignore
-
     }
   }
 }
