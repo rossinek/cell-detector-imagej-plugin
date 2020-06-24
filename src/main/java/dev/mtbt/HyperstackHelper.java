@@ -7,8 +7,8 @@ import ij.process.ImageConverter;
 
 public class HyperstackHelper {
   public static ImagePlus extractFrame(ImagePlus imp, int channel, int slice, int frame) {
-    return SubHyperstackMaker.makeSubhyperstack(imp, Integer.toString(channel),
-        Integer.toString(slice), Integer.toString(frame)).duplicate();
+    return SubHyperstackMaker.makeSubhyperstack(imp.duplicate(), Integer.toString(channel),
+        Integer.toString(slice), Integer.toString(frame));
   }
 
   public static ImagePlus extractChannel(ImagePlus imp, int channel) {

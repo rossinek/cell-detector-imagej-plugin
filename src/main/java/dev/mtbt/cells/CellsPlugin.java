@@ -2,6 +2,9 @@ package dev.mtbt.cells;
 
 import ij.ImageListener;
 import ij.ImagePlus;
+import ij.gui.Line;
+import ij.gui.Roi;
+import ij.gui.ShapeRoi;
 import ij.plugin.frame.RoiManager;
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -61,19 +64,18 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
   protected CellsPluginToolbar toolbar;
   protected DialogStepperActions dialogActions;
 
-  private CellCollection cellCollection;
+  private CellCollection cellCollection = new CellCollection();
 
   private RunnableCheckBox showEndpointsCheckBox;
 
+  protected CellObserver cellObserver;
+
   @Override
   public void run() {
-    ImagePlus.addImageListener(this);
     if (imp == null)
       return;
 
-    this.cellCollection = new CellCollection();
     this.impPreviewStack = this.imp.duplicate();
-    CellObserver.setObservedImage(this.impPreviewStack);
 
     JPanel contentPanel = new JPanel();
     contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
@@ -97,6 +99,37 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
     this.dialog.getSidePanel().add(footerPanel, BorderLayout.SOUTH);
     this.updateStep();
     this.dialog.pack();
+
+    ImagePlus.addImageListener(this);
+    this.initializeCellObserver();
+  }
+
+  private void initializeCellObserver() {
+    // final ImagePlus observedImage = this.impPreviewStack;
+    final CellsPlugin context = this;
+
+    this.cellObserver = new CellObserver(new CellObserverListener() {
+
+      @Override
+      public ImagePlus getObservedImage() {
+        return context.impPreviewStack;
+      }
+
+      @Override
+      public void cellFrameRoisShorten(ShapeRoi shapeRoi) {
+        context.getCurrentCells().forEach(c -> c.cellFrameRoisShorten(shapeRoi));
+      }
+
+      @Override
+      public void cellFrameRoisCut(Line lineRoi) {
+        context.getCurrentCells().forEach(c -> c.cellFrameRoisCut(lineRoi));
+      }
+
+      @Override
+      public void cellFrameRoiModified(Roi modifiedRoi) {
+        context.getCurrentCells().forEach(c -> c.cellFrameRoiModified(modifiedRoi));
+      }
+    });
   }
 
   private void previousStep() {
@@ -159,36 +192,33 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
 
   private void cleanup() {
     ImagePlus.removeImageListener(this);
-    if (this.cellCollection == null)
-      return;
     this.cellCollection.destroy();
-    this.cellCollection = null;
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
+    roiManager.close();
+    this.impPreviewStack.close();
   }
 
-  protected void showFirstFrameWithCells() {
-    int frame = this.cellCollection.isEmpty() ? 1 : this.cellCollection.getF0();
-    this.impPreviewStack.setT(frame);
+  protected List<Cell> getCurrentCells() {
+    int frame = this.impPreviewStack.getT();
+    return cellCollection.getCells(frame);
   }
 
   private void displayCells() {
-    CellObserver.removeListeners();
     if (this.cellCollection == null)
       return;
     RoiManager roiManager = ImageJUtils.getRoiManager();
     roiManager.reset();
     roiManager.runCommand("show all with labels");
     roiManager.runCommand("usenames", "true");
-    int frame = this.impPreviewStack.getFrame();
-    List<Cell> currentCells = cellCollection.getCells(frame);
-    currentCells.forEach(cell -> CellObserver.addListener(cell));
+
+    List<Cell> currentCells = getCurrentCells();
+    int frame = this.impPreviewStack.getT();
     currentCells.stream().forEach(cell -> roiManager.addRoi(cell.getObservedRoi(frame)));
     if (this.showEndpointsCheckBox.isSelected()) {
       currentCells.stream()
           .forEach(cell -> cell.endsToRois(frame).forEach(roi -> roiManager.addRoi(roi)));
     }
-
   }
 
   @Override

@@ -1,6 +1,5 @@
 package dev.mtbt.cells.skeleton;
 
-import dev.mtbt.ImageJUtils;
 import dev.mtbt.Utils;
 import dev.mtbt.cells.Cell;
 import dev.mtbt.cells.CellCollection;
@@ -11,7 +10,6 @@ import dev.mtbt.gui.RunnableSpinner;
 import dev.mtbt.util.Pair;
 import ij.IJ;
 import ij.ImagePlus;
-import ij.plugin.frame.RoiManager;
 import java.awt.ComponentOrientation;
 import java.awt.FlowLayout;
 import java.awt.Point;
@@ -66,7 +64,6 @@ public class SkeletonCellLifeTracker extends SkeletonBasedStep implements ICells
 
     // this.dialog.pack();
     this.showFirstFrameWithCells();
-    this.preview();
 
     return this.dialogContent;
   }
@@ -84,12 +81,14 @@ public class SkeletonCellLifeTracker extends SkeletonBasedStep implements ICells
   protected void showFirstFrameWithCells() {
     int frame = this.cellCollection.isEmpty() ? 1 : this.cellCollection.getF0();
     this.imp.setT(frame);
+    this.preview();
   }
 
   protected void onPreviousFrameClick() {
     int frame = this.imp.getT();
     if (frame > 1) {
       this.imp.setT(frame - 1);
+      this.preview();
     }
   }
 
@@ -107,6 +106,7 @@ public class SkeletonCellLifeTracker extends SkeletonBasedStep implements ICells
     }
     cells.forEach(cell -> cell.setFrame(index, cell.getFrame(index - 1).clone()));
     this.imp.setT(index);
+    this.preview();
   }
 
   protected void onCalculateNextFramesClick() {
@@ -122,18 +122,17 @@ public class SkeletonCellLifeTracker extends SkeletonBasedStep implements ICells
       IJ.showMessage("There are no cells in current frame");
       return;
     }
-    cells.forEach(cell -> cell.clearFuture(f0 + 1));
-    int index = f0 + 1;
-    if (index > this.imp.getNFrames()) {
+    final int frameIndex = f0 + 1;
+    cells.forEach(cell -> cell.clearFuture(frameIndex));
+    if (frameIndex > this.imp.getNFrames()) {
       return;
     }
-    cells = this.cellCollection.getCells(index - 1);
-    final int frameIndex = index;
+    cells = this.cellCollection.getCells(frameIndex - 1);
     this.imp.setT(frameIndex);
+
     this.preview();
 
     HashMap<Cell, List<Pair<Point2D, Spine>>> successors = new HashMap<>();
-
     cells.stream().forEach(cell -> {
       // generate spines for some points on previous spine frame
       // get generated spine that is closest to all points
@@ -143,12 +142,12 @@ public class SkeletonCellLifeTracker extends SkeletonBasedStep implements ICells
       List<Point2D> pointCandidates = ratioCandidates.stream()
           .map(ratio -> frame.pointAlongLine(ratio)).collect(Collectors.toList());
       Pair<Point2D, Spine> nextSpine = this.bestCandidateForNewSpine(pointCandidates);
-
       List<Pair<Point2D, Spine>> nextSpines = new ArrayList<>(Arrays.asList(nextSpine));
 
       int candidateIndex = pointCandidates.indexOf(nextSpine.getKey());
       double nextSpineLength = Utils.polylineLength(nextSpine.getValue().toPolyline());
       double prevSpineLength = frame.getLength();
+
       int nRatios = ratioCandidates.size();
       if (nextSpineLength < 0.9 * prevSpineLength) {
         List<Double> oppositeRatios;
@@ -190,7 +189,6 @@ public class SkeletonCellLifeTracker extends SkeletonBasedStep implements ICells
         cell.setChildren(c1, c2);
       }
     });
-
     this.preview();
   }
 

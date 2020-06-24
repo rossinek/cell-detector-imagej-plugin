@@ -21,7 +21,7 @@ import ij.gui.ShapeRoi;
 import ij.plugin.frame.RoiManager;
 import ij.process.FloatPolygon;
 
-public class Cell extends AbstractCellCollection implements CellObserverListener {
+public class Cell extends AbstractCellCollection {
   private static final String PROPERTY_CELL_FRAME_ID = "cell-frame-id";
 
   private String name = null;
@@ -232,7 +232,6 @@ public class Cell extends AbstractCellCollection implements CellObserverListener
         .map(roi -> (PolygonRoi) roi).collect(Collectors.toList());
   }
 
-  @Override
   public void cellFrameRoiModified(Roi modifiedRoi) {
     if (this.isOwnCellFrameRoi(modifiedRoi)) {
       PolygonRoi polygonRoi = (PolygonRoi) modifiedRoi;
@@ -245,12 +244,10 @@ public class Cell extends AbstractCellCollection implements CellObserverListener
     }
   }
 
-  @Override
   public void cellFrameRoisShorten(ShapeRoi shapeRoi) {
     this.cellFrameRoisShorten(this.getOwnActiveRois(), shapeRoi);
   }
 
-  @Override
   public void cellFrameRoisCut(Line lineRoi) {
     this.cellFrameRoisCut(this.getOwnActiveRois(), lineRoi);
   }
@@ -369,6 +366,5 @@ public class Cell extends AbstractCellCollection implements CellObserverListener
   public void destroy() {
     super.destroy();
     this.destroyChildren();
-    CellObserver.removeListener(this);
   }
 }

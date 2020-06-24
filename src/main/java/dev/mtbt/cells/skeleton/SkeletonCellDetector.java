@@ -71,7 +71,7 @@ public class SkeletonCellDetector extends SkeletonBasedStep implements ICellsPlu
       this.imp.deleteRoi();
     }
     this.cellCollection.clear();
-    this.updateAndDrawCells();
+    this.preview();
   }
 
   protected void onRunClick() {
@@ -87,7 +87,7 @@ public class SkeletonCellDetector extends SkeletonBasedStep implements ICellsPlu
       this.cellCollection.addToCollection(new Cell(f0, this.spineToCellFrame(spines.get(index))));
     }
 
-    this.updateAndDrawCells();
+    this.preview();
   }
 
   private List<Point> collectSelectedPoints() {

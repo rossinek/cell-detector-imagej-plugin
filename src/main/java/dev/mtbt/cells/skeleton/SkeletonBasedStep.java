@@ -1,10 +1,8 @@
 package dev.mtbt.cells.skeleton;
 
-import ij.ImageListener;
 import ij.ImagePlus;
 import ij.gui.ImageRoi;
 import ij.gui.Overlay;
-import ij.plugin.frame.RoiManager;
 import ij.process.FloatProcessor;
 
 import java.awt.Point;
@@ -163,7 +161,7 @@ public abstract class SkeletonBasedStep {
   }
 
   public void preview() {
-    // this.updateAndDrawCells();
+    this.imp.updateAndDraw();
     this.removeImageOverlay();
     if (this.skeletonCheckBox.isSelected()) {
       showImageOverlay(this.getSkeleton().toImagePlus());
@@ -256,17 +254,7 @@ public abstract class SkeletonBasedStep {
     return lineEnd;
   }
 
-  protected void updateAndDrawCells() {
-    RoiManager roiManager = ImageJUtils.getRoiManager();
-    roiManager.reset();
-    this.cellCollection.getCells(this.imp.getT()).stream()
-        .map(cell -> cell.getObservedRoi(this.imp.getT())).filter(roi -> roi != null)
-        .forEach(roi -> roiManager.addRoi(roi));
-    roiManager.runCommand("show all");
-  }
-
   public void imageUpdated() {
-    this.preview();
     SkeletonBasedStep.cache.updateCache(this.imp);
   }
 
