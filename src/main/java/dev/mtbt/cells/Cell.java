@@ -18,11 +18,10 @@ import ij.gui.PointRoi;
 import ij.gui.PolygonRoi;
 import ij.gui.Roi;
 import ij.gui.ShapeRoi;
-import ij.plugin.frame.RoiManager;
 import ij.process.FloatPolygon;
 
 public class Cell extends AbstractCellCollection {
-  private static final String PROPERTY_CELL_FRAME_ID = "cell-frame-id";
+  protected static final String PROPERTY_CELL_FRAME_ID = "cell-frame-id";
 
   private String name = null;
 
@@ -104,10 +103,12 @@ public class Cell extends AbstractCellCollection {
   }
 
   public void clearFuture(int fromIndex) throws IllegalArgumentException {
-    if (fromIndex <= this.getF0()) {
+    if (fromIndex < this.getF0()) {
       throw new IllegalArgumentException("fromIndex has to be in the future");
     }
-    if (fromIndex <= this.getFN()) {
+    if (fromIndex == this.getF0()) {
+      this.destroy();
+    } else if (fromIndex <= this.getFN()) {
       this.destroyChildren();
       this.frames.subList(fromIndex - this.f0, this.frames.size()).clear();
     } else {
@@ -197,7 +198,7 @@ public class Cell extends AbstractCellCollection {
     return this.hashCode() + ":" + index;
   }
 
-  private int getIndexByCellFrameId(String cellFrameId) {
+  protected int getIndexByCellFrameId(String cellFrameId) {
     String[] parts = cellFrameId.split(":");
     return Integer.parseInt(parts[parts.length - 1]);
   }
@@ -224,14 +225,6 @@ public class Cell extends AbstractCellCollection {
     return polylineRoi;
   }
 
-  private List<PolygonRoi> getOwnActiveRois() {
-    RoiManager roiManager = RoiManager.getInstance();
-    if (roiManager == null)
-      return new ArrayList<>();
-    return Arrays.asList(roiManager.getRoisAsArray()).stream().filter(this::isOwnCellFrameRoi)
-        .map(roi -> (PolygonRoi) roi).collect(Collectors.toList());
-  }
-
   public void cellFrameRoiModified(Roi modifiedRoi) {
     if (this.isOwnCellFrameRoi(modifiedRoi)) {
       PolygonRoi polygonRoi = (PolygonRoi) modifiedRoi;
@@ -244,19 +237,11 @@ public class Cell extends AbstractCellCollection {
     }
   }
 
-  public void cellFrameRoisShorten(ShapeRoi shapeRoi) {
-    this.cellFrameRoisShorten(this.getOwnActiveRois(), shapeRoi);
-  }
-
-  public void cellFrameRoisCut(Line lineRoi) {
-    this.cellFrameRoisCut(this.getOwnActiveRois(), lineRoi);
-  }
-
-  private void cellFrameRoisCut(List<PolygonRoi> roisToCut, Line line) {
+  protected void cellFrameRoisCut(List<PolygonRoi> ownRois, Line line) {
     List<Pair<PolygonRoi, List<Point2D>[]>> changes = new ArrayList<>();
     Point2D l1 = new Point2D.Double(line.x1d, line.y1d);
     Point2D l2 = new Point2D.Double(line.x2d, line.y2d);
-    roisToCut.forEach(roi -> {
+    ownRois.forEach(roi -> {
       List<Point2D>[] polylines =
           Utils.cutPolyline(Utils.toPolyline(roi.getFloatPolygon()), l1, l2);
       if (polylines.length > 1)
@@ -279,7 +264,7 @@ public class Cell extends AbstractCellCollection {
         try {
           this.parent.addToCollection(c1);
           this.parent.addToCollection(c2);
-          this.parent.removeFromCollection(this);
+          this.destroy();
         } catch (Exception e) {
           IJ.showMessage(
               "Can't cut first frame of cell: Parent cell would have more than 2 children.");
@@ -290,8 +275,8 @@ public class Cell extends AbstractCellCollection {
     });
   }
 
-  private void cellFrameRoisShorten(List<PolygonRoi> roisToShorten, ShapeRoi shape) {
-    roisToShorten.forEach(roi -> {
+  protected void cellFrameRoisShorten(List<PolygonRoi> ownRois, ShapeRoi shape) {
+    ownRois.forEach(roi -> {
       FloatPolygon fp = roi.getFloatPolygon();
       boolean containsBegin = shape.containsPoint(fp.xpoints[0], fp.ypoints[0]);
       boolean containsEnd =
@@ -310,14 +295,14 @@ public class Cell extends AbstractCellCollection {
         } else if (index > this.getF0()) {
           this.clearFuture(index);
         } else {
-          this.parent.removeFromCollection(this);
+          this.destroy();
         }
         shape.getImage().updateAndDraw();
       }
     });
   }
 
-  private boolean isOwnCellFrameRoi(Roi roi) {
+  protected boolean isOwnCellFrameRoi(Roi roi) {
     if (roi == null) {
       return false;
     }

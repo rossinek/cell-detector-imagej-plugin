@@ -43,7 +43,7 @@ public class CellCollection extends AbstractCellCollection {
 
   @Override
   public void clearFuture(int index) {
-    if (index <= this.getF0()) {
+    if (index < this.getF0()) {
       throw new IllegalArgumentException("fromIndex has to be in the future");
     }
     // destroy and remove from collections all cells that starts at or after `index`
