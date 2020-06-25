@@ -39,8 +39,8 @@ public class CellsPluginToolbar extends JPanel implements ActionListener, IJEven
     this.listener = listener;
     this.buttonGroup = new ClearableButtonGroup();
 
-    this.addButton(CellObserver.TOOL_CUT, "/images/cut.png");
-    this.addButton(CellObserver.TOOL_ERASE, "/images/erase.png");
+    this.addButton(CellsManager.TOOL_CUT, "/images/cut.png");
+    this.addButton(CellsManager.TOOL_ERASE, "/images/erase.png");
 
     IJ.addEventListener(this);
   }
@@ -74,7 +74,7 @@ public class CellsPluginToolbar extends JPanel implements ActionListener, IJEven
   public void actionPerformed(ActionEvent e) {
     boolean isSelected = this.buttonGroup.getSelection() != null;
     String tool = isSelected ? e.getActionCommand() : null;
-    CellObserver.setActiveTool(tool);
+    CellsManager.setActiveTool(tool);
     listener.accept(tool);
   }
 
@@ -84,7 +84,7 @@ public class CellsPluginToolbar extends JPanel implements ActionListener, IJEven
     if (eventID == IJEventListener.TOOL_CHANGED && activeButton != null
         && IJ.getToolName() != activeButton.getActionCommand()) {
       this.buttonGroup.clearSelection();
-      CellObserver.setActiveTool(null);
+      CellsManager.setActiveTool(null);
     }
   }
 }

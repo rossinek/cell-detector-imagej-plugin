@@ -45,7 +45,7 @@ enum CellsPluginStepType {
 
 
 @Plugin(type = Command.class, menuPath = "Development>Cell detector")
-public class CellsPlugin extends DynamicCommand implements ImageListener, CellObserverListener {
+public class CellsPlugin extends DynamicCommand implements ImageListener {
   @Parameter
   private ImagePlus imp;
   @Parameter
@@ -64,7 +64,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, CellOb
 
   private RunnableCheckBox showEndpointsCheckBox;
 
-  protected CellObserver cellObserver;
+  protected CellsManager cellsManager;
 
   @Override
   public void run() {
@@ -97,21 +97,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, CellOb
     this.dialog.pack();
 
     ImagePlus.addImageListener(this);
-    this.initializeCellObserver();
-  }
-
-  @Override
-  public ImagePlus getObservedImage() {
-    return this.impPreviewStack;
-  }
-
-  @Override
-  public List<Cell> getActiveObservedCells() {
-    return this.getCurrentCells();
-  }
-
-  private void initializeCellObserver() {
-    this.cellObserver = new CellObserver(this);
+    this.cellsManager = new CellsManager(this.impPreviewStack, this.cellCollection);
   }
 
   private void previousStep() {
@@ -168,37 +154,16 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, CellOb
   public void preview() {
     if (this.impPreviewStack == null)
       return;
-    // this.displayCells();
     this.impPreviewStack.updateAndDraw();
   }
 
   private void cleanup() {
     ImagePlus.removeImageListener(this);
     this.cellCollection.destroy();
-    RoiManager roiManager = this.cellObserver.getObservedRoiManager();
+    RoiManager roiManager = this.cellsManager.getObservedRoiManager();
     roiManager.reset();
     roiManager.close();
     this.impPreviewStack.close();
-  }
-
-  protected List<Cell> getCurrentCells() {
-    int frame = this.impPreviewStack.getT();
-    return cellCollection.getCells(frame);
-  }
-
-  private void displayCells() {
-    RoiManager roiManager = this.cellObserver.getObservedRoiManager();
-    roiManager.reset();
-    roiManager.runCommand("show all with labels");
-    roiManager.runCommand("usenames", "true");
-
-    List<Cell> currentCells = getCurrentCells();
-    int frame = this.impPreviewStack.getT();
-    currentCells.stream().forEach(cell -> roiManager.addRoi(cell.getObservedRoi(frame)));
-    if (this.showEndpointsCheckBox.isSelected()) {
-      currentCells.stream()
-          .forEach(cell -> cell.endsToRois(frame).forEach(roi -> roiManager.addRoi(roi)));
-    }
   }
 
   @Override
@@ -215,7 +180,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener, CellOb
   @Override
   public void imageUpdated(ImagePlus image) {
     if (image == this.impPreviewStack) {
-      this.displayCells();
+      this.cellsManager.displayCells(this.showEndpointsCheckBox.isSelected());
     }
   }
 }

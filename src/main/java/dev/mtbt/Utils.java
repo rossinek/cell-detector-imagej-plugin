@@ -189,7 +189,7 @@ public class Utils {
         } else {
           List<Point2D> polyline1 = new ArrayList<>(polyline.subList(0, i));
           polyline1.add(ip);
-          List<Point2D> polyline2 = new ArrayList<>(polyline.subList(i + 1, polyline.size()));
+          List<Point2D> polyline2 = new ArrayList<>(polyline.subList(i, polyline.size()));
           polyline2.add(0, ip);
           return new List[] {polyline1, polyline2};
         }

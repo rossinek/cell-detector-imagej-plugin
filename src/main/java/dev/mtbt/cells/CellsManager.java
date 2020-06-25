@@ -2,7 +2,10 @@ package dev.mtbt.cells;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
@@ -19,21 +22,21 @@ import ij.gui.RoiListener;
 import ij.gui.ShapeRoi;
 import ij.plugin.frame.RoiManager;
 
-public class CellObserver implements RoiObserverListener, ListDataListener {
+public class CellsManager implements RoiObserverListener, ListDataListener {
   // Those are actual IJ tool names
   static public final String TOOL_CUT = "line", TOOL_ERASE = "brush";
 
   static private String activeTool = null;
 
-  private CellObserverListener listener;
+  private ImagePlus observedImage;
+  private CellCollection cellCollection;
+  private int lastDisplayedRoisFrame = -1;
+  private Set<Roi> lastDisplayedRois = new HashSet<>();
 
-  public CellObserver(CellObserverListener listener) {
-    this.listener = listener;
+  public CellsManager(ImagePlus observedImage, CellCollection cellCollection) {
+    this.observedImage = observedImage;
+    this.cellCollection = cellCollection;
     RoiObserver.addListener(this);
-    RoiManager roiManager = RoiManager.getInstance();
-    if (roiManager != null) {
-
-    }
   }
 
   public RoiManager getObservedRoiManager() {
@@ -51,10 +54,30 @@ public class CellObserver implements RoiObserverListener, ListDataListener {
     return roiManager;
   }
 
+  public void displayCells() {
+    this.displayCells(false);
+  }
+
+  public void displayCells(boolean showEndpoints) {
+    RoiManager roiManager = this.getObservedRoiManager();
+    roiManager.reset();
+    roiManager.runCommand("show all with labels");
+    roiManager.runCommand("usenames", "true");
+
+    List<Cell> currentCells = this.getCurrentCells();
+    int frame = this.observedImage.getT();
+    currentCells.stream().forEach(cell -> roiManager.addRoi(cell.getObservedRoi(frame)));
+    if (showEndpoints) {
+      currentCells.stream()
+          .forEach(cell -> cell.endsToRois(frame).forEach(roi -> roiManager.addRoi(roi)));
+    }
+    this.lastDisplayedRoisFrame = frame;
+    this.lastDisplayedRois = new HashSet<Roi>(Arrays.asList(roiManager.getRoisAsArray()));
+  }
+
   @Override
   public void roiModified(Roi modifiedRoi, int id) {
-    if (this.listener.getObservedImage() != null
-        && modifiedRoi.getImage() == this.listener.getObservedImage()) {
+    if (this.observedImage != null && modifiedRoi.getImage() == this.observedImage) {
       this.notify(modifiedRoi, id);
     }
   }
@@ -68,6 +91,11 @@ public class CellObserver implements RoiObserverListener, ListDataListener {
     return new ArrayList<PolygonRoi>();
   }
 
+  public List<Cell> getCurrentCells() {
+    int frame = this.observedImage.getT();
+    return cellCollection.getCells(frame);
+  }
+
   private void notify(Roi modifiedRoi, int id) {
     boolean isCut = modifiedRoi.getType() == Roi.LINE && id == RoiListener.CREATED
         && modifiedRoi.getState() == Roi.NORMAL;
@@ -75,7 +103,7 @@ public class CellObserver implements RoiObserverListener, ListDataListener {
     boolean potentialModification = !isCut && !isErase && id == RoiListener.MOVED
         || id == RoiListener.EXTENDED || id == RoiListener.MODIFIED;
 
-    List<Cell> cells = listener.getActiveObservedCells();
+    List<Cell> cells = this.getCurrentCells();
 
     if (isCut && activeTool == TOOL_CUT) {
       cells.forEach(cell -> {
@@ -114,29 +142,30 @@ public class CellObserver implements RoiObserverListener, ListDataListener {
     }
     if (tool != null) {
       switch (tool) {
-        case CellObserver.TOOL_CUT:
-          IJ.setTool(CellObserver.TOOL_CUT);
+        case CellsManager.TOOL_CUT:
+          IJ.setTool(CellsManager.TOOL_CUT);
           break;
-        case CellObserver.TOOL_ERASE:
-          IJ.setTool(CellObserver.TOOL_ERASE);
+        case CellsManager.TOOL_ERASE:
+          IJ.setTool(CellsManager.TOOL_ERASE);
           break;
       }
     }
-    CellObserver.activeTool = tool;
+    CellsManager.activeTool = tool;
   }
 
   @Override
   public void intervalRemoved(ListDataEvent e) {
-    System.out.println("> intervalRemoved");
     RoiManager roiManager = RoiManager.getInstance();
-    if (roiManager != null) {
-      Roi[] rois = roiManager.getRoisAsArray();
-      this.listener.getActiveObservedCells().forEach(cell -> {
-        if (Arrays.asList(rois).stream().noneMatch(cell::isOwnCellFrameRoi)) {
-          // cell.clearFuture(listener.getObservedImage().getT());
-          System.out.println("Current rois: " + Arrays.asList(rois).stream().map(r -> r.getName())
-              .collect(Collectors.joining(", ")));
-          System.out.println("Should be removed! " + cell.getName());
+    if (roiManager != null && this.lastDisplayedRoisFrame == this.observedImage.getT()) {
+      // check if any of previously displayed cells
+      // that should be still visible is missing
+      List<Cell> shouldStillBeThere = this.getCurrentCells().stream()
+          .filter(cell -> this.lastDisplayedRois.stream().anyMatch(cell::isOwnCellFrameRoi))
+          .collect(Collectors.toList());
+      shouldStillBeThere.forEach(cell -> {
+        if (Arrays.asList(roiManager.getRoisAsArray()).stream()
+            .noneMatch(cell::isOwnCellFrameRoi)) {
+          cell.clearFuture(this.observedImage.getT());
         }
       });
     }
@@ -148,6 +177,5 @@ public class CellObserver implements RoiObserverListener, ListDataListener {
 
   @Override
   public void contentsChanged(ListDataEvent e) {
-    System.out.println("> contentsChanged");
   }
 }
