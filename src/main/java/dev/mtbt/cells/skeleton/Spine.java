@@ -50,22 +50,6 @@ public class Spine extends Graph {
     return Spine.overlapType(this, s) == OverlapType.Full;
   }
 
-  // public void traverse(GraphTraverser t) {
-  // traverse(this.e1, this.e1.getBranches().first(), t);
-  // }
-
-  // public void traverse(SpineVertex begin, Edge firstEdge, GraphTraverser t) {
-  // SpineVertex current = begin;
-  // Edge nextEdge = firstEdge;
-  // while (true) {
-  // t.callback(current, nextEdge.getOppositeVertex(current), nextEdge);
-  // current = (SpineVertex) nextEdge.getOppositeVertex(current);
-  // if (current.isLeaf())
-  // break;
-  // nextEdge = current.getOppositeBranch(nextEdge);
-  // }
-  // }
-
   @Override
   public Edge addEdge(Edge e) {
     validateNewEdge(e);
