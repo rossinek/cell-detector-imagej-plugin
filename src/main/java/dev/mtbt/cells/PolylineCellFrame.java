@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PolylineCellFrame extends CellFrame {
-
+  private static final long serialVersionUID = 3215921062922697449L;
   private ArrayList<Point2D> polyline;
 
   public PolylineCellFrame(List<Point2D> polyline) {

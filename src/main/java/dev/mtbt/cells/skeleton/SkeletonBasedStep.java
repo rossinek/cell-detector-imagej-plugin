@@ -34,6 +34,7 @@ import dev.mtbt.vendor.shapeindex.ShapeIndexMap;
 public abstract class SkeletonBasedStep implements ICellsPluginStep {
   static private SkeletonPluginCache cache;
 
+  private boolean initialized = false;
   protected ImagePlus imp;
   protected CellCollection cellCollection;
   protected JPanel dialogContent;
@@ -48,7 +49,7 @@ public abstract class SkeletonBasedStep implements ICellsPluginStep {
 
   @Override
   public JComponent init(ImagePlus imp, CellCollection collection) {
-    if (this.dialogContent != null) {
+    if (this.initialized) {
       throw new IllegalAccessError("Already initialized");
     }
     this.imp = imp;
@@ -84,6 +85,7 @@ public abstract class SkeletonBasedStep implements ICellsPluginStep {
           // this.dialog.pack()
         });
     addCenteredComponent(this.dialogContent, expandablePanel);
+    this.initialized = true;
     return this.dialogContent;
   }
 
@@ -167,7 +169,9 @@ public abstract class SkeletonBasedStep implements ICellsPluginStep {
 
   @Override
   public void cleanup() {
-    imp.setOverlay(null);
+    if (this.imp != null) {
+      imp.setOverlay(null);
+    }
   }
 
   protected Spine performSearch(Point point) {
@@ -252,12 +256,14 @@ public abstract class SkeletonBasedStep implements ICellsPluginStep {
 
   @Override
   public void imageUpdated() {
-    SkeletonBasedStep.cache.updateCache(this.imp);
-    this.removeImageOverlay();
-    if (this.skeletonCheckBox.isSelected()) {
-      showImageOverlay(this.getSkeleton().toImagePlus());
-    } else if (this.shapeIndexCheckBox.isSelected()) {
-      showImageOverlay(getShapeIndexMap());
+    if (this.initialized) {
+      SkeletonBasedStep.cache.updateCache(this.imp);
+      this.removeImageOverlay();
+      if (this.skeletonCheckBox.isSelected()) {
+        showImageOverlay(this.getSkeleton().toImagePlus());
+      } else if (this.shapeIndexCheckBox.isSelected()) {
+        showImageOverlay(getShapeIndexMap());
+      }
     }
   }
 

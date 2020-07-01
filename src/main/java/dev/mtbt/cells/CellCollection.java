@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class CellCollection extends AbstractCellCollection {
+  private static final long serialVersionUID = -8586874564152868341L;
   List<AbstractCellCollection> subCollections;
 
   public CellCollection() {

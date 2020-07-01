@@ -102,6 +102,13 @@
     </properties>
 
     <dependencies>
+
+        <dependency>
+            <groupId>com.thoughtworks.xstream</groupId>
+            <artifactId>xstream</artifactId>
+            <version>1.4.12</version>
+        </dependency>
+
         <!-- ImageJ dependencies -->
         <dependency>
             <groupId>net.imagej</groupId>

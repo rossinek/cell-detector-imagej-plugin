@@ -13,42 +13,18 @@ import org.scijava.command.Command;
 import org.scijava.command.DynamicCommand;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
-import org.scijava.ui.UIService;
 import dev.mtbt.cells.skeleton.SkeletonCellDetector;
 import dev.mtbt.cells.skeleton.SkeletonCellLifeTracker;
 import dev.mtbt.gui.DialogStepperActions;
 import dev.mtbt.gui.RunnableCheckBox;
 import dev.mtbt.gui.StackWindowWithPanel;
 
-enum CellsPluginStepType {
-  Detector, LifeTracker, Measurements;
-
-  private static CellsPluginStepType[] vals = values();
-
-  public CellsPluginStepType previous() {
-    return vals[(vals.length + this.ordinal() - 1) % vals.length];
-  }
-
-  public CellsPluginStepType next() {
-    return vals[(this.ordinal() + 1) % vals.length];
-  }
-
-  public boolean isFirst() {
-    return this.ordinal() == 0;
-  }
-
-  public boolean isLast() {
-    return this.ordinal() == vals.length - 1;
-  }
-}
-
-
 @Plugin(type = Command.class, menuPath = "Development>Cell detector")
 public class CellsPlugin extends DynamicCommand implements ImageListener {
+  public static CellsPlugin instance;
+
   @Parameter
   private ImagePlus imp;
-  @Parameter
-  private UIService uiService;
 
   private CellsPluginStepType currentStep = CellsPluginStepType.Detector;
   private ICellsPluginStep currentStepInstance;
@@ -69,6 +45,8 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
   public void run() {
     if (imp == null)
       return;
+
+    CellsPlugin.instance = this;
 
     this.impPreviewStack = this.imp.duplicate();
 
@@ -156,12 +134,16 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
     this.impPreviewStack.updateAndDraw();
   }
 
-  private void cleanup() {
+  public void cleanup() {
+    CellsPlugin.instance = null;
     ImagePlus.removeImageListener(this);
     this.cellCollection.destroy();
     RoiManager roiManager = this.cellsManager.getObservedRoiManager();
     roiManager.reset();
     roiManager.close();
+    if (this.currentStepInstance != null) {
+      this.currentStepInstance.cleanup();
+    }
     this.impPreviewStack.close();
   }
 
@@ -172,15 +154,42 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
   @Override
   public void imageClosed(ImagePlus image) {
     if (image == this.impPreviewStack) {
-      this.cellCollection.destroy();
+      this.cleanup();
     }
   }
 
   @Override
   public void imageUpdated(ImagePlus image) {
     if (image == this.impPreviewStack) {
+      this.dialog.requestFocus();
       this.cellsManager.displayCells(this.showEndpointsCheckBox.isSelected());
       this.currentStepInstance.imageUpdated();
+    }
+  }
+
+  public CellCollection getCellCollection() {
+    return this.cellCollection;
+  }
+
+  enum CellsPluginStepType {
+    Detector, LifeTracker, Measurements;
+
+    private static CellsPluginStepType[] vals = values();
+
+    public CellsPluginStepType previous() {
+      return vals[(vals.length + this.ordinal() - 1) % vals.length];
+    }
+
+    public CellsPluginStepType next() {
+      return vals[(this.ordinal() + 1) % vals.length];
+    }
+
+    public boolean isFirst() {
+      return this.ordinal() == 0;
+    }
+
+    public boolean isLast() {
+      return this.ordinal() == vals.length - 1;
     }
   }
 }

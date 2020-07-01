@@ -3,6 +3,8 @@ package dev.mtbt.cells;
 import java.awt.Color;
 import java.awt.Polygon;
 import java.awt.geom.Point2D;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
@@ -21,6 +23,8 @@ import ij.gui.ShapeRoi;
 import ij.process.FloatPolygon;
 
 public class Cell extends AbstractCellCollection {
+  private static final long serialVersionUID = 1966938599823606758L;
+
   protected static final String PROPERTY_CELL_FRAME_ID = "cell-frame-id";
 
   private String name = null;
@@ -36,7 +40,7 @@ public class Cell extends AbstractCellCollection {
    * roiHashCode is hash that represents PolygonRoi shape and will change each time roi shape
    * changed
    */
-  private Hashtable<String, Integer> lastRoiHashCodes = new Hashtable<>();
+  private transient Hashtable<String, Integer> lastRoiHashCodes = new Hashtable<>();
 
   public Cell(int f0, CellFrame first) {
     this.f0 = f0;
@@ -45,6 +49,11 @@ public class Cell extends AbstractCellCollection {
 
   public void setFamily(String family) {
     this.setName(family, 0, 1);
+  }
+
+  private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+    in.defaultReadObject();
+    this.lastRoiHashCodes = new Hashtable<>();
   }
 
   protected void setName(String family, int generation, int indexInGeneration) {

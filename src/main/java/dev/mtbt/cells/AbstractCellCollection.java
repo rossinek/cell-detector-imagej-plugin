@@ -1,8 +1,10 @@
 package dev.mtbt.cells;
 
+import java.io.Serializable;
 import java.util.List;
 
-public abstract class AbstractCellCollection {
+public abstract class AbstractCellCollection implements Serializable {
+  private static final long serialVersionUID = -8752681597115932465L;
   protected AbstractCellCollection parent = null;
 
   public AbstractCellCollection getParentCollection() {

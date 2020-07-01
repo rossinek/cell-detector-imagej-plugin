@@ -1,12 +1,13 @@
 package dev.mtbt.cells;
 
 import java.awt.geom.Point2D;
+import java.io.Serializable;
 import java.util.List;
 import java.util.ListIterator;
 
 import dev.mtbt.util.Pair;
 
-abstract public class CellFrame {
+abstract public class CellFrame implements Serializable {
   abstract public Point2D getBegin();
 
   abstract public Point2D getEnd();
