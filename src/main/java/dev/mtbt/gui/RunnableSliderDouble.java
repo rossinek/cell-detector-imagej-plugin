@@ -4,9 +4,8 @@ import java.awt.Component;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import javax.swing.JLabel;
-import javax.swing.event.ChangeListener;
 
-public class RunnableSliderDouble extends RunnableSlider implements ChangeListener {
+public class RunnableSliderDouble extends RunnableSlider {
   double scale;
 
   public RunnableSliderDouble(double min, double max, double step, double val, Runnable onChange) {

@@ -19,10 +19,10 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import dev.mtbt.HyperstackHelper;
-import dev.mtbt.ImageJUtils;
 import dev.mtbt.Utils;
 import dev.mtbt.cells.CellCollection;
 import dev.mtbt.cells.CellFrame;
+import dev.mtbt.cells.ICellsPluginStep;
 import dev.mtbt.cells.PolylineCellFrame;
 import dev.mtbt.graph.Vertex;
 import dev.mtbt.gui.ExpandablePanel;
@@ -31,7 +31,7 @@ import dev.mtbt.gui.RunnableSpinner;
 import dev.mtbt.util.Pair;
 import dev.mtbt.vendor.shapeindex.ShapeIndexMap;
 
-public abstract class SkeletonBasedStep {
+public abstract class SkeletonBasedStep implements ICellsPluginStep {
   static private SkeletonPluginCache cache;
 
   protected ImagePlus imp;
@@ -46,7 +46,8 @@ public abstract class SkeletonBasedStep {
   protected SkeletonBasedStep() {
   }
 
-  protected JComponent init(ImagePlus imp, CellCollection collection) {
+  @Override
+  public JComponent init(ImagePlus imp, CellCollection collection) {
     if (this.dialogContent != null) {
       throw new IllegalAccessError("Already initialized");
     }
@@ -162,14 +163,9 @@ public abstract class SkeletonBasedStep {
 
   public void preview() {
     this.imp.updateAndDraw();
-    this.removeImageOverlay();
-    if (this.skeletonCheckBox.isSelected()) {
-      showImageOverlay(this.getSkeleton().toImagePlus());
-    } else if (this.shapeIndexCheckBox.isSelected()) {
-      showImageOverlay(getShapeIndexMap());
-    }
   }
 
+  @Override
   public void cleanup() {
     imp.setOverlay(null);
   }
@@ -254,8 +250,15 @@ public abstract class SkeletonBasedStep {
     return lineEnd;
   }
 
+  @Override
   public void imageUpdated() {
     SkeletonBasedStep.cache.updateCache(this.imp);
+    this.removeImageOverlay();
+    if (this.skeletonCheckBox.isSelected()) {
+      showImageOverlay(this.getSkeleton().toImagePlus());
+    } else if (this.shapeIndexCheckBox.isSelected()) {
+      showImageOverlay(getShapeIndexMap());
+    }
   }
 
   private class SkeletonPluginCache {

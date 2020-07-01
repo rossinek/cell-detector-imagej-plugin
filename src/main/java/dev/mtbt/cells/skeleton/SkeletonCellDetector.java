@@ -9,14 +9,13 @@ import javax.swing.Box;
 import javax.swing.JPanel;
 import dev.mtbt.cells.Cell;
 import dev.mtbt.cells.CellCollection;
-import dev.mtbt.cells.ICellsPluginStep;
 import dev.mtbt.gui.RunnableButton;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.PolygonRoi;
 import ij.gui.Toolbar;
 
-public class SkeletonCellDetector extends SkeletonBasedStep implements ICellsPluginStep {
+public class SkeletonCellDetector extends SkeletonBasedStep {
 
   private RunnableButton selectCellsButton;
   private RunnableButton clearSelectedCellsButton;

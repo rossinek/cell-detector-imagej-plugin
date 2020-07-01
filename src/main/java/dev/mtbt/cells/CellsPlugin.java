@@ -5,7 +5,6 @@ import ij.ImagePlus;
 import ij.plugin.frame.RoiManager;
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.util.List;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
@@ -181,6 +180,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
   public void imageUpdated(ImagePlus image) {
     if (image == this.impPreviewStack) {
       this.cellsManager.displayCells(this.showEndpointsCheckBox.isSelected());
+      this.currentStepInstance.imageUpdated();
     }
   }
 }

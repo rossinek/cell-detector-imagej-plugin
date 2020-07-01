@@ -4,7 +4,6 @@ import dev.mtbt.Utils;
 import dev.mtbt.cells.Cell;
 import dev.mtbt.cells.CellCollection;
 import dev.mtbt.cells.CellFrame;
-import dev.mtbt.cells.ICellsPluginStep;
 import dev.mtbt.gui.RunnableButton;
 import dev.mtbt.gui.RunnableSpinner;
 import dev.mtbt.util.Pair;
@@ -24,7 +23,7 @@ import java.util.stream.Collectors;
 import javax.swing.Box;
 import javax.swing.JPanel;
 
-public class SkeletonCellLifeTracker extends SkeletonBasedStep implements ICellsPluginStep {
+public class SkeletonCellLifeTracker extends SkeletonBasedStep {
 
   private RunnableButton previousFrameButton;
   private RunnableButton duplicateNextFrameButton;
