@@ -1,5 +1,6 @@
 package dev.mtbt.cells;
 
+import ij.IJ;
 import ij.ImageListener;
 import ij.ImagePlus;
 import ij.plugin.frame.RoiManager;
@@ -9,6 +10,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import org.scijava.command.Command;
 import org.scijava.command.DynamicCommand;
 import org.scijava.plugin.Parameter;
@@ -47,9 +49,21 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
       return;
 
     CellsPlugin.instance = this;
-
     this.impPreviewStack = this.imp.duplicate();
 
+    try {
+      SwingUtilities.invokeAndWait(this::initComponents);
+    } catch (Exception e) {
+      e.printStackTrace();
+      IJ.showMessage("Couldn't initialize plugin");
+      this.cleanup();
+    }
+
+    ImagePlus.addImageListener(this);
+    this.cellsManager = new CellsManager(this.impPreviewStack, this.cellCollection);
+  }
+
+  private void initComponents() {
     JPanel contentPanel = new JPanel();
     contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
     contentPanel.add(Box.createVerticalStrut(20));
@@ -70,11 +84,9 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
     this.dialog = new StackWindowWithPanel(this.impPreviewStack);
     this.dialog.getSidePanel().add(contentPanel, BorderLayout.NORTH);
     this.dialog.getSidePanel().add(footerPanel, BorderLayout.SOUTH);
+
     this.updateStep();
     this.dialog.pack();
-
-    ImagePlus.addImageListener(this);
-    this.cellsManager = new CellsManager(this.impPreviewStack, this.cellCollection);
   }
 
   private void previousStep() {
