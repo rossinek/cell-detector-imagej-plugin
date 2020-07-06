@@ -40,9 +40,6 @@ public class CellsImporterPlugin extends DynamicCommand {
       if (CellsPlugin.instance == null) {
         CommandService cmdService = this.context().getService(CommandService.class);
         cmdService.run(CellsPlugin.class, true);
-        // ModuleService moduleService = this.context().getService(ModuleService.class);
-        // ImageJUtils.executeCommand(moduleService, cmdService, CellsPlugin.class);
-        // new CellsPlugin().run();
       }
 
       File file = uiService.chooseFile(null, FileWidget.OPEN_STYLE);

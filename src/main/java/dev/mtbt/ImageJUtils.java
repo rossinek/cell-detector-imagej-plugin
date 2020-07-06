@@ -1,12 +1,6 @@
 package dev.mtbt;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import org.scijava.command.Command;
-import org.scijava.command.CommandService;
-import org.scijava.module.MethodCallException;
-import org.scijava.module.Module;
-import org.scijava.module.ModuleService;
+import ij.measure.ResultsTable;
 import ij.plugin.frame.RoiManager;
 
 public class ImageJUtils {
@@ -15,24 +9,18 @@ public class ImageJUtils {
     return roiManager == null ? new RoiManager() : roiManager;
   }
 
-  public static <C extends Command> Module executeCommand(ModuleService moduleService,
-      CommandService cmdService, final Class<C> cmdClass) {
-    final Module module = moduleService.createModule(cmdService.getCommand(cmdClass));
-    try {
-      module.initialize();
-    } catch (final MethodCallException ex) {
-      ex.printStackTrace();
+  public static void appendResultsTable(ResultsTable target, ResultsTable source) {
+    int nColumns = source.getLastColumn() + 1;
+    for (int row = 0; row < source.size(); row++) {
+      target.incrementCounter();
+      for (int column = 0; column < nColumns; column++) {
+        double value = source.getValueAsDouble(column, row);
+        if (!Double.isNaN(value)) {
+          target.addValue(source.getColumnHeading(column), value);
+        } else {
+          target.addValue(source.getColumnHeading(column), source.getStringValue(column, row));
+        }
+      }
     }
-    cmdService.run(cmdClass, true);
-    module.run();
-    final Future<Module> run = moduleService.run(module, true);
-    try {
-      run.get();
-    } catch (final InterruptedException ex) {
-      ex.printStackTrace();
-    } catch (final ExecutionException ex) {
-      ex.printStackTrace();
-    }
-    return module;
   }
 }
