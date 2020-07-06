@@ -63,9 +63,13 @@ public class StepMeasurements implements ICellsPluginStep {
     RunnableButton plotLengthButton = new RunnableButton("Plot length", this::plotLengths);
     this.addCenteredComponent(dialogContent, plotLengthButton);
 
-    RunnableButton measureLengthsButton =
+    RunnableButton plotProfileButton =
         new RunnableButton("Plot profile in time", this::plotProfile);
-    this.addCenteredComponent(dialogContent, measureLengthsButton);
+    this.addCenteredComponent(dialogContent, plotProfileButton);
+
+    RunnableButton plotAverageProfileButton =
+        new RunnableButton("Plot average profile", this::plotAverageProfile);
+    this.addCenteredComponent(dialogContent, plotAverageProfileButton);
 
     RunnableButton plotProfilePicksButton =
         new RunnableButton("Show profile picks", this::plotProfilePicks);
@@ -105,8 +109,7 @@ public class StepMeasurements implements ICellsPluginStep {
   }
 
   protected void showLengthsTable() {
-    String cellName = (String) this.measurementsCellNameSelect.getSelectedItem();
-    Cell cell = CellAnalyzer.getCellByName(this.cellCollection, cellName);
+    Cell cell = this.getCurrentCell();
     this.measureLengths(cell).show("Lengths table");
   }
 
@@ -120,8 +123,7 @@ public class StepMeasurements implements ICellsPluginStep {
   }
 
   protected void plotLengths() {
-    String cellName = (String) this.measurementsCellNameSelect.getSelectedItem();
-    Cell cell = CellAnalyzer.getCellByName(this.cellCollection, cellName);
+    Cell cell = this.getCurrentCell();
     ResultsTable table = this.measureLengths(cell);
 
     table.getColumnAsDoubles(0);
@@ -146,23 +148,55 @@ public class StepMeasurements implements ICellsPluginStep {
     return new ProfilePlot(frameImp);
   }
 
-  protected void plotProfile() {
+  private Cell getCurrentCell() {
     String cellName = (String) this.measurementsCellNameSelect.getSelectedItem();
-    Cell cell = CellAnalyzer.getCellByName(this.cellCollection, cellName);
+    return CellAnalyzer.getCellByName(this.cellCollection, cellName);
+  }
+
+  protected Plot plotProfile() {
+    Cell cell = this.getCurrentCell();
     int f0 = cell.getF0();
     int fN = cell.getFN();
-    Plot plot = getFrameProfile(cell, f0).getPlot();
+    Plot plot = this.getFrameProfile(cell, f0).getPlot();
     plot.addToStack();
     for (int frame = f0 + 1; frame < fN; frame++) {
-      plot.getStack().addPlot(getFrameProfile(cell, frame).getPlot());
+      plot.getStack().addPlot(this.getFrameProfile(cell, frame).getPlot());
     }
     plot.show();
-    WindowManager.getCurrentImage().setTitle("Profile of " + cellName);
+    WindowManager.getCurrentImage().setTitle("Profile of " + cell.getName());
+    return plot;
+  }
+
+  protected void plotAverageProfile() {
+    Cell cell = this.getCurrentCell();
+    int nFrames = cell.getFN() - cell.getF0();
+    double[][] profiles = new double[nFrames][];
+    int maxLength = 0;
+    for (int index = 0; index < nFrames; index++) {
+      profiles[index] = this.getFrameProfile(cell, index + cell.getF0()).getProfile();
+      maxLength = Math.max(maxLength, profiles[index].length);
+    }
+
+    Plot avgProfilePlot =
+        new Plot("Average profile of " + cell.getName(), "Position on the body (0-1)", "Intensity");
+    double[] xValues = new double[maxLength];
+    double[] yValues = new double[maxLength];
+    for (int index = 0; index < maxLength; index++) {
+      double value = 0;
+      for (double[] profile : profiles) {
+        double profileIndex = ((double) index / maxLength) * profile.length;
+        value += sampleData(profile, profileIndex);
+      }
+      xValues[index] = (double) index / maxLength;
+      yValues[index] = value / nFrames;
+    }
+
+    avgProfilePlot.add("line", xValues, yValues);
+    avgProfilePlot.show();
   }
 
   protected void plotProfilePicks() {
-    String cellName = (String) this.measurementsCellNameSelect.getSelectedItem();
-    Cell cell = CellAnalyzer.getCellByName(this.cellCollection, cellName);
+    Cell cell = this.getCurrentCell();
     Plot plot = new Plot("Profile maxima in time", "Frame index", "Position on the body (0-1)");
     plot.setColor(Color.BLACK);
     plot.addLabel(0.001, 0, "     low intensity");
@@ -221,8 +255,7 @@ public class StepMeasurements implements ICellsPluginStep {
   }
 
   protected void exportCellData() {
-    String cellName = (String) this.measurementsCellNameSelect.getSelectedItem();
-    Cell cell = CellAnalyzer.getCellByName(this.cellCollection, cellName);
+    Cell cell = this.getCurrentCell();
     SaveDialog sd = new SaveDialog("Save Cell Data", "Cell " + cell.getName(), ".csv");
     String file = sd.getFileName();
     if (file != null) {
@@ -248,16 +281,20 @@ public class StepMeasurements implements ICellsPluginStep {
       table.addValue("length", cell.getFrame(frame).getLength());
       double[] profile = getFrameProfile(cell, frame).getProfile();
       for (int i = 0; i < profileLength; i++) {
-        double profileIndex = ((double) i / profileLength) * (profile.length - 1);
-        int floorIndex = (int) Math.floor(profileIndex);
-        int ceilIndex = (int) Math.ceil(profileIndex);
-        double ceilWeight = profileIndex - floorIndex;
-        double floorWeight = 1.0 - ceilWeight;
-        double value = floorWeight * profile[floorIndex] + ceilWeight * profile[ceilIndex];
-        table.addValue("p" + i, value);
+        double profileIndex = ((double) i / profileLength) * profile.length;
+        table.addValue("p" + i, this.sampleData(profile, profileIndex));
       }
     }
     return table;
+  }
+
+
+  private double sampleData(double[] data, double dataIndex) {
+    int floorIndex = (int) Math.max(0, Math.floor(dataIndex));
+    int ceilIndex = (int) Math.min(Math.ceil(dataIndex), data.length - 1);
+    double ceilWeight = dataIndex - floorIndex;
+    double floorWeight = 1.0 - ceilWeight;
+    return floorWeight * data[floorIndex] + ceilWeight * data[ceilIndex];
   }
 
   protected void exportAllCellsData() {
