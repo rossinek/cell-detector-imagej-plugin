@@ -4,6 +4,7 @@ import ij.ImagePlus;
 import ij.gui.StackWindow;
 import java.awt.Panel;
 import java.lang.reflect.Method;
+import java.util.function.BooleanSupplier;
 import java.awt.Component;
 import java.awt.BorderLayout;
 import javax.swing.BoxLayout;
@@ -12,6 +13,7 @@ import javax.swing.JPanel;
 public class StackWindowWithPanel extends StackWindow {
   Panel mainPanel;
   JPanel sidePanel;
+  BooleanSupplier confirmCloseSupplier = () -> true;
 
   public StackWindowWithPanel(ImagePlus imp) {
     super(imp);
@@ -51,7 +53,19 @@ public class StackWindowWithPanel extends StackWindow {
     }
   }
 
+  public void setConfirmationMethod(BooleanSupplier confirmSupplier) {
+    this.confirmCloseSupplier = confirmSupplier;
+  }
+
   public JPanel getSidePanel() {
     return this.sidePanel;
+  }
+
+  @Override
+  public boolean close() {
+    if (this.confirmCloseSupplier.getAsBoolean()) {
+      return super.close();
+    }
+    return false;
   }
 }

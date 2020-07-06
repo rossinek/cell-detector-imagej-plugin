@@ -15,6 +15,8 @@ import org.scijava.command.Command;
 import org.scijava.command.DynamicCommand;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
+import org.scijava.ui.DialogPrompt;
+import org.scijava.ui.UIService;
 import dev.mtbt.cells.skeleton.SkeletonCellDetector;
 import dev.mtbt.cells.skeleton.SkeletonCellLifeTracker;
 import dev.mtbt.gui.DialogStepperActions;
@@ -24,6 +26,9 @@ import dev.mtbt.gui.StackWindowWithPanel;
 @Plugin(type = Command.class, menuPath = "Development>Cell detector")
 public class CellsPlugin extends DynamicCommand implements ImageListener {
   public static CellsPlugin instance;
+
+  @Parameter
+  private UIService uiService;
 
   @Parameter
   private ImagePlus imp;
@@ -82,6 +87,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
     addCenteredComponent(footerPanel, this.dialogActions);
 
     this.dialog = new StackWindowWithPanel(this.impPreviewStack);
+    this.dialog.setConfirmationMethod(this::confirmClose);
     this.dialog.getSidePanel().add(contentPanel, BorderLayout.NORTH);
     this.dialog.getSidePanel().add(footerPanel, BorderLayout.SOUTH);
 
@@ -104,6 +110,8 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
       this.dialogActions.setIsFirst(this.currentStep.isFirst());
       this.dialogActions.setIsLast(this.currentStep.isLast());
       this.updateStep();
+    } else if (this.confirmClose()) {
+      this.cleanup();
     }
   }
 
@@ -156,7 +164,15 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
     if (this.currentStepInstance != null) {
       this.currentStepInstance.cleanup();
     }
+    this.dialog.setConfirmationMethod(() -> true);
     this.impPreviewStack.close();
+  }
+
+  private boolean confirmClose() {
+    DialogPrompt.Result result = uiService.showDialog(
+        "Are you sure you want to close the plugin?\nMake sure you exported your cells (Development > Export Cells).\nYou won't be able to restore them after plugin is closed.",
+        DialogPrompt.MessageType.QUESTION_MESSAGE, DialogPrompt.OptionType.YES_NO_OPTION);
+    return result == DialogPrompt.Result.YES_OPTION;
   }
 
   @Override

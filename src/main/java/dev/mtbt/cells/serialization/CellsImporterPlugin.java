@@ -1,22 +1,17 @@
 package dev.mtbt.cells.serialization;
 
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.util.List;
 import java.util.Scanner;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.DomDriver;
 import org.scijava.command.Command;
 import org.scijava.command.CommandService;
 import org.scijava.command.DynamicCommand;
-import org.scijava.module.ModuleService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.DialogPrompt;
 import org.scijava.ui.UIService;
 import org.scijava.widget.FileWidget;
-import dev.mtbt.ImageJUtils;
 import dev.mtbt.cells.CellCollection;
 import dev.mtbt.cells.CellsPlugin;
 
@@ -30,8 +25,8 @@ public class CellsImporterPlugin extends DynamicCommand {
     if (CellsPlugin.instance != null && !CellsPlugin.instance.getCellCollection().isEmpty()) {
       DialogPrompt.Result result =
           uiService.showDialog("You will loose selected cells. Are you sure you want to continue?",
-              DialogPrompt.MessageType.QUESTION_MESSAGE);
-      if (result != DialogPrompt.Result.OK_OPTION && result != DialogPrompt.Result.YES_OPTION) {
+              DialogPrompt.MessageType.QUESTION_MESSAGE, DialogPrompt.OptionType.YES_NO_OPTION);
+      if (result != DialogPrompt.Result.YES_OPTION) {
         return;
       }
     }
