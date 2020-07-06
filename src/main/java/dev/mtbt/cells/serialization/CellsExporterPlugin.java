@@ -8,7 +8,6 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.DomDriver;
 import org.scijava.command.Command;
 import org.scijava.command.DynamicCommand;
-import org.scijava.module.ModuleService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.UIService;
@@ -19,9 +18,6 @@ import dev.mtbt.cells.CellsPlugin;
 public class CellsExporterPlugin extends DynamicCommand {
   @Parameter
   private UIService uiService;
-
-  @Parameter
-  private ModuleService moduleService;
 
   @Override
   public void run() {

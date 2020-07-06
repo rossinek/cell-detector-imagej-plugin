@@ -103,12 +103,6 @@
 
     <dependencies>
 
-        <dependency>
-            <groupId>com.thoughtworks.xstream</groupId>
-            <artifactId>xstream</artifactId>
-            <version>1.4.12</version>
-        </dependency>
-
         <!-- ImageJ dependencies -->
         <dependency>
             <groupId>net.imagej</groupId>
@@ -130,29 +124,38 @@
             <artifactId>imagej-legacy</artifactId>
             <scope>runtime</scope>
         </dependency>
+
         <!-- https://github.com/openmicroscopy/bioformats -->
         <dependency>
             <groupId>ome</groupId>
             <artifactId>bio-formats_plugins</artifactId>
-            <!-- <exclusions>
-                NB: Guava requires Java 7+, so we exclude it here.
-                <exclusion>
-                    <groupId>com.google.guava</groupId>
-                    <artifactId>guava</artifactId>
-                </exclusion>
-            </exclusions> -->
         </dependency>
+
         <dependency>
             <groupId>ome</groupId>
             <artifactId>formats-api</artifactId>
         </dependency>
+
         <dependency>
             <groupId>sc.fiji</groupId>
             <artifactId>AnalyzeSkeleton_</artifactId>
         </dependency>
+
         <dependency>
             <groupId>sc.fiji</groupId>
             <artifactId>Skeletonize3D_</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.thoughtworks.xstream</groupId>
+            <artifactId>xstream</artifactId>
+            <version>1.4.12</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
 
