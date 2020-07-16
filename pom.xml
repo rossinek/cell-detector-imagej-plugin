@@ -122,7 +122,6 @@
         <dependency>
             <groupId>net.imagej</groupId>
             <artifactId>imagej-legacy</artifactId>
-            <scope>runtime</scope>
         </dependency>
 
         <!-- https://github.com/openmicroscopy/bioformats -->

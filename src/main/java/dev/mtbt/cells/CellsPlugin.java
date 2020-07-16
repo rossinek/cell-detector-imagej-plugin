@@ -4,6 +4,7 @@ import ij.IJ;
 import ij.ImageListener;
 import ij.ImagePlus;
 import ij.plugin.frame.RoiManager;
+import net.imagej.legacy.LegacyService;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import javax.swing.Box;
@@ -29,6 +30,9 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
 
   @Parameter
   private UIService uiService;
+
+  @Parameter
+  private LegacyService legacyService;
 
   @Parameter
   private ImagePlus imp;
@@ -169,10 +173,17 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
   }
 
   private boolean confirmClose() {
+    if (legacyService.getIJ1Helper().isDisposing()) {
+      return true;
+    }
     DialogPrompt.Result result = uiService.showDialog(
         "Are you sure you want to close the plugin?\nMake sure you exported your cells (Development > Export Cells).\nYou won't be able to restore them after plugin is closed.",
         DialogPrompt.MessageType.QUESTION_MESSAGE, DialogPrompt.OptionType.YES_NO_OPTION);
-    return result == DialogPrompt.Result.YES_OPTION;
+    boolean response = result == DialogPrompt.Result.YES_OPTION;
+    if (response) {
+      impPreviewStack.changes = false;
+    }
+    return response;
   }
 
   @Override
