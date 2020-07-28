@@ -5,7 +5,7 @@
 
     <groupId>dev.mtbt</groupId>
     <artifactId>Mtbt_Plugin</artifactId>
-    <version>0.1.3-SNAPSHOT</version>
+    <version>0.1.4-SNAPSHOT</version>
 
     <name>Mtbt Plugin</name>
     <description>Base for ii MT plugin.</description>
