@@ -18,6 +18,7 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.DialogPrompt;
 import org.scijava.ui.UIService;
+import dev.mtbt.cells.measurements.StepMeasurements;
 import dev.mtbt.cells.skeleton.SkeletonCellDetector;
 import dev.mtbt.cells.skeleton.SkeletonCellLifeTracker;
 import dev.mtbt.gui.DialogStepperActions;

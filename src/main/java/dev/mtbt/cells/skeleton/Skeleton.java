@@ -1,6 +1,6 @@
 package dev.mtbt.cells.skeleton;
 
-import dev.mtbt.Utils;
+import dev.mtbt.util.Geometry;
 import dev.mtbt.graph.Graph;
 import dev.mtbt.graph.Edge;
 import dev.mtbt.graph.IEdgeEvaluator;
@@ -30,7 +30,7 @@ public class Skeleton extends Graph {
   private IEdgeEvaluator weakestSlabEvaluator = (edge, start) -> {
     double lowestValue = Double.POSITIVE_INFINITY;
     for (Point slab : edge.getSlabs()) {
-      double dist = Utils.distance(slab, start.getPoints());
+      double dist = Geometry.distance(slab, start.getPoints());
       if (dist <= EDGE_EVALUATOR_RADIUS) {
         lowestValue = Math.min(initialFp.getf(slab.x, slab.y), lowestValue);
       }

@@ -1,7 +1,7 @@
 /*
  * Based on by http://imagej.net/Find_Peaks by Tiago Ferreira, v1.0.5 2016.03
  */
-package dev.mtbt.util;
+package dev.mtbt.vendor;
 
 import ij.IJ;
 import ij.ImagePlus;

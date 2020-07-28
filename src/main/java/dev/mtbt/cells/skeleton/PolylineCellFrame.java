@@ -1,10 +1,11 @@
-package dev.mtbt.cells;
+package dev.mtbt.cells.skeleton;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
+import dev.mtbt.cells.AbstractCellFrame;
 
-public class PolylineCellFrame extends CellFrame {
+public class PolylineCellFrame extends AbstractCellFrame {
   private static final long serialVersionUID = 3215921062922697449L;
   private ArrayList<Point2D> polyline;
 
@@ -33,7 +34,7 @@ public class PolylineCellFrame extends CellFrame {
   }
 
   @Override
-  public CellFrame clone() {
+  public AbstractCellFrame clone() {
     return new PolylineCellFrame(this.polyline);
   }
 

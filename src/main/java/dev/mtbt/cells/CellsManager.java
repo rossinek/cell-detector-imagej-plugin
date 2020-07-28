@@ -8,9 +8,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
-import dev.mtbt.ImageJUtils;
+import dev.mtbt.imagej.ImageJUtils;
 import dev.mtbt.imagej.RoiObserver;
-import dev.mtbt.imagej.RoiObserverListener;
+import dev.mtbt.imagej.IRoiObserverListener;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.WindowManager;
@@ -21,7 +21,7 @@ import ij.gui.RoiListener;
 import ij.gui.ShapeRoi;
 import ij.plugin.frame.RoiManager;
 
-public class CellsManager implements RoiObserverListener, ListDataListener {
+public class CellsManager implements IRoiObserverListener, ListDataListener {
   // Those are actual IJ tool names
   static public final String TOOL_CUT = "line", TOOL_ERASE = "brush";
 

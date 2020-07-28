@@ -15,7 +15,7 @@ import ij.ImagePlus;
 import ij.gui.PolygonRoi;
 import ij.gui.Toolbar;
 
-public class SkeletonCellDetector extends SkeletonBasedStep {
+public class SkeletonCellDetector extends AbstractSkeletonBasedStep {
 
   private RunnableButton selectCellsButton;
   private RunnableButton clearSelectedCellsButton;

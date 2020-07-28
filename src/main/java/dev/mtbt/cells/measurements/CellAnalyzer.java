@@ -1,9 +1,11 @@
-package dev.mtbt.cells;
+package dev.mtbt.cells.measurements;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import dev.mtbt.cells.Cell;
+import dev.mtbt.cells.CellCollection;
 
 public class CellAnalyzer {
   static public Stream<Cell> getFamilyStream(Cell cell) {

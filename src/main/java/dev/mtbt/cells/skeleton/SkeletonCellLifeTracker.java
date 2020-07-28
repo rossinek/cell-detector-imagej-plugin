@@ -1,9 +1,9 @@
 package dev.mtbt.cells.skeleton;
 
-import dev.mtbt.Utils;
+import dev.mtbt.util.Geometry;
 import dev.mtbt.cells.Cell;
 import dev.mtbt.cells.CellCollection;
-import dev.mtbt.cells.CellFrame;
+import dev.mtbt.cells.AbstractCellFrame;
 import dev.mtbt.gui.RunnableButton;
 import dev.mtbt.gui.RunnableSpinner;
 import dev.mtbt.util.Pair;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 import javax.swing.Box;
 import javax.swing.JPanel;
 
-public class SkeletonCellLifeTracker extends SkeletonBasedStep {
+public class SkeletonCellLifeTracker extends AbstractSkeletonBasedStep {
 
   private RunnableButton previousFrameButton;
   private RunnableButton duplicateNextFrameButton;
@@ -136,7 +136,7 @@ public class SkeletonCellLifeTracker extends SkeletonBasedStep {
       // generate spines for some points on previous spine frame
       // get generated spine that is closest to all points
       // add it as next frame to cell
-      CellFrame frame = cell.getFrame(frameIndex - 1);
+      AbstractCellFrame frame = cell.getFrame(frameIndex - 1);
       List<Double> ratioCandidates = Arrays.asList(0.2, 0.4, 0.6, 0.8);
       List<Point2D> pointCandidates = ratioCandidates.stream()
           .map(ratio -> frame.pointAlongLine(ratio)).collect(Collectors.toList());
@@ -144,7 +144,7 @@ public class SkeletonCellLifeTracker extends SkeletonBasedStep {
       List<Pair<Point2D, Spine>> nextSpines = new ArrayList<>(Arrays.asList(nextSpine));
 
       int candidateIndex = pointCandidates.indexOf(nextSpine.getKey());
-      double nextSpineLength = Utils.polylineLength(nextSpine.getValue().toPolyline());
+      double nextSpineLength = Geometry.polylineLength(nextSpine.getValue().toPolyline());
       double prevSpineLength = frame.getLength();
 
       int nRatios = ratioCandidates.size();
@@ -172,12 +172,12 @@ public class SkeletonCellLifeTracker extends SkeletonBasedStep {
     });
 
     this.fixConflicts(successors.values().stream().flatMap(l -> l.stream())
-        .map(p -> new Pair<>(Utils.toAwtPoint(p.getKey()), p.getValue()))
+        .map(p -> new Pair<>(Geometry.toAwtPoint(p.getKey()), p.getValue()))
         .collect(Collectors.toList()));
 
     successors.forEach((cell, list) -> {
       if (list.size() < 2) {
-        CellFrame prevCellFrame = cell.getFrame(frameIndex - 1);
+        AbstractCellFrame prevCellFrame = cell.getFrame(frameIndex - 1);
         this.ensureValidSuccessorDirection(prevCellFrame, list.get(0).getValue());
         cell.setFrame(frameIndex, this.spineToCellFrame(list.get(0).getValue()));
       } else {
@@ -191,7 +191,7 @@ public class SkeletonCellLifeTracker extends SkeletonBasedStep {
     this.preview();
   }
 
-  private void ensureValidSuccessorDirection(CellFrame cellFrame, Spine successor) {
+  private void ensureValidSuccessorDirection(AbstractCellFrame cellFrame, Spine successor) {
     double bb = cellFrame.getBegin().distance(successor.getBegin());
     double be = cellFrame.getBegin().distance(successor.getEnd());
     double eb = cellFrame.getEnd().distance(successor.getBegin());
@@ -228,7 +228,7 @@ public class SkeletonCellLifeTracker extends SkeletonBasedStep {
 
   private Pair<Point2D, Spine> bestCandidateForNewSpine(List<Point2D> pointCandidates) {
     return pointCandidates.stream().map(point2d -> {
-      Point point = Utils.toAwtPoint(point2d);
+      Point point = Geometry.toAwtPoint(point2d);
       Spine spine = this.performSearch(Arrays.asList(point)).get(0);
       double score = pointCandidates.stream().reduce(0.0,
           (acc, candidate) -> acc + point2d.distance(candidate), (v0, v1) -> v0 + v1);

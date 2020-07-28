@@ -12,8 +12,8 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.commons.lang.NotImplementedException;
-import dev.mtbt.Utils;
 import dev.mtbt.imagej.PolygonRoiVerbose;
+import dev.mtbt.util.Geometry;
 import dev.mtbt.util.Pair;
 import ij.IJ;
 import ij.gui.Line;
@@ -30,7 +30,7 @@ public class Cell extends AbstractCellCollection {
 
   private String name = null;
 
-  protected ArrayList<CellFrame> frames = new ArrayList<>();
+  protected ArrayList<AbstractCellFrame> frames = new ArrayList<>();
 
   private int f0;
 
@@ -43,7 +43,7 @@ public class Cell extends AbstractCellCollection {
    */
   private transient Hashtable<String, Integer> lastRoiHashCodes = new Hashtable<>();
 
-  public Cell(int f0, CellFrame first) {
+  public Cell(int f0, AbstractCellFrame first) {
     this.f0 = f0;
     this.frames.add(first);
   }
@@ -88,24 +88,24 @@ public class Cell extends AbstractCellCollection {
     return this.f0 + this.frames.size();
   }
 
-  public ArrayList<CellFrame> getFrames() {
+  public ArrayList<AbstractCellFrame> getFrames() {
     return this.frames;
   }
 
-  public CellFrame getFrame(int index) {
+  public AbstractCellFrame getFrame(int index) {
     try {
-      CellFrame frame = this.frames.get(index - this.f0);
+      AbstractCellFrame frame = this.frames.get(index - this.f0);
       return frame;
     } catch (IndexOutOfBoundsException e) {
       return null;
     }
   }
 
-  public boolean pushFrame(CellFrame frame) {
+  public boolean pushFrame(AbstractCellFrame frame) {
     return this.frames.add(frame);
   }
 
-  public CellFrame setFrame(int index, CellFrame frame) {
+  public AbstractCellFrame setFrame(int index, AbstractCellFrame frame) {
     if (index - this.f0 == this.frames.size()) {
       this.pushFrame(frame);
     }
@@ -129,7 +129,7 @@ public class Cell extends AbstractCellCollection {
   }
 
   public PolygonRoi getObservedRoi(int index) {
-    CellFrame frame = this.getFrame(index);
+    AbstractCellFrame frame = this.getFrame(index);
     if (frame == null) {
       return null;
     }
@@ -144,7 +144,7 @@ public class Cell extends AbstractCellCollection {
   }
 
   public List<Roi> endsToRois(int index) {
-    CellFrame frame = this.getFrame(index);
+    AbstractCellFrame frame = this.getFrame(index);
     if (frame == null)
       return new ArrayList<>();
     PointRoi beginRoi = new PointRoi(frame.getBegin().getX(), frame.getBegin().getY());
@@ -214,14 +214,14 @@ public class Cell extends AbstractCellCollection {
   }
 
   public PolygonRoi toRoi(int index) {
-    CellFrame frame = this.getFrame(index);
+    AbstractCellFrame frame = this.getFrame(index);
     if (frame == null) {
       return null;
     }
     return this.toRoi(frame);
   }
 
-  private PolygonRoi toRoi(CellFrame frame) {
+  private PolygonRoi toRoi(AbstractCellFrame frame) {
     if (frame == null)
       return null;
     List<Point2D> polyline = frame.toPolyline();
@@ -242,7 +242,7 @@ public class Cell extends AbstractCellCollection {
       int lastRoiHashCode = this.lastRoiHashCodes.get(cellFrameId);
       if (lastRoiHashCode != this.getPolygonRoiHashCode(polygonRoi)) {
         int index = this.getIndexByCellFrameId(cellFrameId);
-        this.getFrame(index).fitPolyline(Utils.toPolyline(polygonRoi.getFloatPolygon()));
+        this.getFrame(index).fitPolyline(Geometry.toPolyline(polygonRoi.getFloatPolygon()));
       }
     }
   }
@@ -253,7 +253,7 @@ public class Cell extends AbstractCellCollection {
     Point2D l2 = new Point2D.Double(line.x2d, line.y2d);
     ownRois.forEach(roi -> {
       List<Point2D>[] polylines =
-          Utils.cutPolyline(Utils.toPolyline(roi.getFloatPolygon()), l1, l2);
+          Geometry.cutPolyline(Geometry.toPolyline(roi.getFloatPolygon()), l1, l2);
       if (polylines.length > 1) {
         Collections.reverse(polylines[1]);
         changes.add(new Pair<>(roi, polylines));
@@ -263,8 +263,8 @@ public class Cell extends AbstractCellCollection {
       String cellFrameId = pair.getKey().getProperty(PROPERTY_CELL_FRAME_ID);
       int index = this.getIndexByCellFrameId(cellFrameId);
 
-      CellFrame cellFrame1 = this.getFrame(index);
-      CellFrame cellFrame2 = cellFrame1.clone();
+      AbstractCellFrame cellFrame1 = this.getFrame(index);
+      AbstractCellFrame cellFrame2 = cellFrame1.clone();
       cellFrame1.fitPolyline(pair.getValue()[0]);
       cellFrame2.fitPolyline(pair.getValue()[1]);
       Cell c1 = new Cell(index, cellFrame1);
@@ -294,13 +294,13 @@ public class Cell extends AbstractCellCollection {
       boolean containsEnd =
           shape.containsPoint(fp.xpoints[fp.npoints - 1], fp.ypoints[fp.npoints - 1]);
       if (containsBegin || containsEnd) {
-        List<Point2D> polyline = Utils.toPolyline(roi.getFloatPolygon());
-        List<Point2D> newPolyline =
-            Utils.erasePolylineEnd(polyline, shape, containsBegin ? Utils.BEGIN : Utils.END);
+        List<Point2D> polyline = Geometry.toPolyline(roi.getFloatPolygon());
+        List<Point2D> newPolyline = Geometry.erasePolylineEnd(polyline, shape,
+            containsBegin ? Geometry.BEGIN : Geometry.END);
 
         String cellFrameId = roi.getProperty(PROPERTY_CELL_FRAME_ID);
         int index = this.getIndexByCellFrameId(cellFrameId);
-        CellFrame cellFrame = this.getFrame(index);
+        AbstractCellFrame cellFrame = this.getFrame(index);
 
         if (newPolyline != null && !newPolyline.isEmpty()) {
           cellFrame.fitPolyline(newPolyline);
@@ -347,7 +347,7 @@ public class Cell extends AbstractCellCollection {
 
   @Override
   public void removeFromCollection(AbstractCellCollection cell) {
-    ArrayList<CellFrame> framesToPreserve;
+    ArrayList<AbstractCellFrame> framesToPreserve;
     if (this.children[0] == cell) {
       framesToPreserve = children[1].frames;
     } else if (this.children[1] == cell) {

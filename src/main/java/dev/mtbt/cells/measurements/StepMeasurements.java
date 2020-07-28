@@ -1,4 +1,4 @@
-package dev.mtbt.cells;
+package dev.mtbt.cells.measurements;
 
 import java.awt.Color;
 import java.awt.Component;
@@ -12,11 +12,15 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSeparator;
-import dev.mtbt.HyperstackHelper;
-import dev.mtbt.ImageJUtils;
+import dev.mtbt.imagej.HyperstackHelper;
+import dev.mtbt.imagej.ImageJUtils;
+import dev.mtbt.cells.Cell;
+import dev.mtbt.cells.CellCollection;
+import dev.mtbt.cells.AbstractCellFrame;
+import dev.mtbt.cells.ICellsPluginStep;
 import dev.mtbt.gui.RunnableButton;
 import dev.mtbt.gui.RunnableSpinner;
-import dev.mtbt.util.PicksFinder;
+import dev.mtbt.vendor.PicksFinder;
 import ij.ImagePlus;
 import ij.WindowManager;
 import ij.gui.Plot;
@@ -108,7 +112,7 @@ public class StepMeasurements implements ICellsPluginStep {
   protected ResultsTable measureLengths(Cell cell) {
     ResultsTable table = new ResultsTable();
     double pxSize = this.imp.getCalibration().pixelWidth;
-    for (CellFrame frame : cell.getFrames()) {
+    for (AbstractCellFrame frame : cell.getFrames()) {
       table.incrementCounter();
       table.addValue("Length", frame.getLength() * pxSize);
     }

@@ -1,6 +1,6 @@
 package dev.mtbt.graph;
 
-import dev.mtbt.Utils;
+import dev.mtbt.util.Geometry;
 import dev.mtbt.util.Pair;
 
 import static java.util.function.Function.identity;
@@ -69,7 +69,7 @@ public class Graph {
     Point bestSlab = null;
     for (Edge edge : this.edges) {
       for (Point slab : edge.getSlabs()) {
-        double dist = Utils.distance(point, slab);
+        double dist = Geometry.distance(point, slab);
         if (dist < bestDistance) {
           bestDistance = dist;
           bestEdge = edge;

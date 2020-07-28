@@ -10,56 +10,56 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-public class CellFrameTest {
+public class AbstractCellFrameTest {
   public static Point2D begin;
   public static Point2D end;
   public static List<Point2D> polyline;
 
   @BeforeAll
   public static void setup() {
-    CellFrameTest.begin = new Point2D.Double(1.0, 1.0);
-    CellFrameTest.end = new Point2D.Double(3.0, 1.0);
-    CellFrameTest.polyline =
-        new ArrayList<>(Arrays.asList(CellFrameTest.begin, new Point2D.Double(1.0, 2.0),
-            new Point2D.Double(2.0, 2.0), new Point2D.Double(2.0, 1.0), CellFrameTest.end));
+    AbstractCellFrameTest.begin = new Point2D.Double(1.0, 1.0);
+    AbstractCellFrameTest.end = new Point2D.Double(3.0, 1.0);
+    AbstractCellFrameTest.polyline =
+        new ArrayList<>(Arrays.asList(AbstractCellFrameTest.begin, new Point2D.Double(1.0, 2.0),
+            new Point2D.Double(2.0, 2.0), new Point2D.Double(2.0, 1.0), AbstractCellFrameTest.end));
   }
 
-  private class CellFrameImplementation extends CellFrame {
+  private class CellFrameImplementation extends AbstractCellFrame {
     @Override
     public Point2D getBegin() {
-      return CellFrameTest.begin;
+      return AbstractCellFrameTest.begin;
     }
 
     @Override
     public Point2D getEnd() {
-      return CellFrameTest.end;
+      return AbstractCellFrameTest.end;
     }
 
     @Override
     public List<Point2D> toPolyline() {
-      return CellFrameTest.polyline;
+      return AbstractCellFrameTest.polyline;
     }
 
     @Override
     public void fitPolyline(List<Point2D> polyline) {
-      CellFrameTest.polyline = new ArrayList<>(polyline);
+      AbstractCellFrameTest.polyline = new ArrayList<>(polyline);
     }
 
     @Override
-    public CellFrame clone() {
+    public AbstractCellFrame clone() {
       return new CellFrameImplementation();
     }
   }
 
   @Test
   public void itReturnsProperLength() {
-    CellFrame frame = new CellFrameImplementation();
+    AbstractCellFrame frame = new CellFrameImplementation();
     assertEquals(frame.getLength(), 4.0);
   }
 
   @Test
   public void itReturnsNullForPointsFromOutsideTheLine() {
-    CellFrame frame = new CellFrameImplementation();
+    AbstractCellFrame frame = new CellFrameImplementation();
     assertEquals(frame.pointAlongLine(-0.1), null);
     assertEquals(frame.pointAlongLine(-100), null);
     assertEquals(frame.pointAlongLine(1.1), null);
@@ -68,9 +68,9 @@ public class CellFrameTest {
 
   @Test
   public void itReturnsPointAlongLine() {
-    CellFrame frame = new CellFrameImplementation();
-    assertEquals(frame.pointAlongLine(0), CellFrameTest.begin);
-    assertEquals(frame.pointAlongLine(1), CellFrameTest.end);
+    AbstractCellFrame frame = new CellFrameImplementation();
+    assertEquals(frame.pointAlongLine(0), AbstractCellFrameTest.begin);
+    assertEquals(frame.pointAlongLine(1), AbstractCellFrameTest.end);
     assertEquals(frame.pointAlongLine(0.5), new Point2D.Double(2.0, 2.0));
     assertEquals(frame.pointAlongLine(0.5625), new Point2D.Double(2.0, 1.75));
     assertEquals(frame.pointAlongLine(0.75), new Point2D.Double(2.0, 1.0));

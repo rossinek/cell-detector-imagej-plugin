@@ -2,6 +2,6 @@ package dev.mtbt.imagej;
 
 import ij.gui.Roi;
 
-public interface RoiObserverListener {
+public interface IRoiObserverListener {
   public void roiModified(Roi roi, int id);
 }

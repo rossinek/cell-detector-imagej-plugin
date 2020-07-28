@@ -5,7 +5,7 @@ import dev.mtbt.util.Pair;
 import java.awt.geom.Point2D;
 import java.util.*;
 import java.util.stream.Collectors;
-import dev.mtbt.Utils;
+import dev.mtbt.util.Geometry;
 import dev.mtbt.cells.skeleton.SpineTraverser.SpineTraverserStep;
 
 public class Spine extends Graph {
@@ -29,7 +29,7 @@ public class Spine extends Graph {
     ArrayList<Point> points = new ArrayList<>();
     if (this.e1 != null) {
       points = this.toPath().toSlabs(true);
-      points = Utils.simplifyPolyline(points, 2);
+      points = Geometry.simplifyPolyline(points, 2);
     }
     return points.stream().map(p -> p.toPoint2D()).collect(Collectors.toCollection(ArrayList::new));
   }

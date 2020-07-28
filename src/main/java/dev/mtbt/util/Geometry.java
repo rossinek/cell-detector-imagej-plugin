@@ -1,7 +1,6 @@
-package dev.mtbt;
+package dev.mtbt.util;
 
 import dev.mtbt.graph.*;
-import dev.mtbt.util.Pair;
 import ij.gui.ShapeRoi;
 import ij.process.FloatPolygon;
 import java.util.*;
@@ -10,7 +9,7 @@ import java.awt.Polygon;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 
-public class Utils {
+public class Geometry {
   public final static int BEGIN = 0;
   public final static int END = 1;
 

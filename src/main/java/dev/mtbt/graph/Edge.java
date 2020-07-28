@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.stream.Collectors;
 
-import static dev.mtbt.Utils.distance;
+import static dev.mtbt.util.Geometry.distance;
 import static java.util.stream.Collectors.toList;
 
 public class Edge implements Comparable<Edge> {

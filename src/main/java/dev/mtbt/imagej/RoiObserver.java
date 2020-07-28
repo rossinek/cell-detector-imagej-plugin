@@ -12,13 +12,13 @@ import java.util.List;
 
 public class RoiObserver {
   static private final EventsListener eventsListenerInstance = new EventsListener();
-  static private final List<RoiObserverListener> listeners = new ArrayList<>();
+  static private final List<IRoiObserverListener> listeners = new ArrayList<>();
 
-  static public void addListener(RoiObserverListener listener) {
+  static public void addListener(IRoiObserverListener listener) {
     listeners.add(listener);
   }
 
-  static public void removeListener(RoiObserverListener listener) {
+  static public void removeListener(IRoiObserverListener listener) {
     listeners.remove(listener);
   }
 

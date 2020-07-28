@@ -1,4 +1,4 @@
-package dev.mtbt;
+package dev.mtbt.imagej;
 
 import ij.ImagePlus;
 import ij.plugin.Duplicator;

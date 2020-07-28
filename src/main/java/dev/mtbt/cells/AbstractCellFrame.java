@@ -7,7 +7,7 @@ import java.util.ListIterator;
 
 import dev.mtbt.util.Pair;
 
-abstract public class CellFrame implements Serializable {
+abstract public class AbstractCellFrame implements Serializable {
   abstract public Point2D getBegin();
 
   abstract public Point2D getEnd();
@@ -16,7 +16,7 @@ abstract public class CellFrame implements Serializable {
 
   abstract public void fitPolyline(List<Point2D> polyline);
 
-  abstract public CellFrame clone();
+  abstract public AbstractCellFrame clone();
 
   public double getLength() {
     List<Point2D> polyline = this.toPolyline();

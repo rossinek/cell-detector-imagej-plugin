@@ -18,12 +18,11 @@ import javax.swing.BoxLayout;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import dev.mtbt.HyperstackHelper;
-import dev.mtbt.Utils;
+import dev.mtbt.imagej.HyperstackHelper;
+import dev.mtbt.util.Geometry;
 import dev.mtbt.cells.CellCollection;
-import dev.mtbt.cells.CellFrame;
+import dev.mtbt.cells.AbstractCellFrame;
 import dev.mtbt.cells.ICellsPluginStep;
-import dev.mtbt.cells.PolylineCellFrame;
 import dev.mtbt.graph.Vertex;
 import dev.mtbt.gui.ExpandablePanel;
 import dev.mtbt.gui.RunnableCheckBox;
@@ -31,7 +30,7 @@ import dev.mtbt.gui.RunnableSpinner;
 import dev.mtbt.util.Pair;
 import dev.mtbt.vendor.shapeindex.ShapeIndexMap;
 
-public abstract class SkeletonBasedStep implements ICellsPluginStep {
+public abstract class AbstractSkeletonBasedStep implements ICellsPluginStep {
   static private SkeletonPluginCache cache;
 
   private boolean initialized = false;
@@ -44,7 +43,7 @@ public abstract class SkeletonBasedStep implements ICellsPluginStep {
   protected RunnableCheckBox shapeIndexCheckBox;
   protected RunnableCheckBox skeletonCheckBox;
 
-  protected SkeletonBasedStep() {
+  protected AbstractSkeletonBasedStep() {
   }
 
   @Override
@@ -55,12 +54,13 @@ public abstract class SkeletonBasedStep implements ICellsPluginStep {
     this.imp = imp;
     this.cellCollection = collection;
 
-    if (SkeletonBasedStep.cache == null || !SkeletonBasedStep.cache.isTarget(this.imp)) {
-      SkeletonBasedStep.cache = new SkeletonPluginCache(this.imp);
+    if (AbstractSkeletonBasedStep.cache == null
+        || !AbstractSkeletonBasedStep.cache.isTarget(this.imp)) {
+      AbstractSkeletonBasedStep.cache = new SkeletonPluginCache(this.imp);
     } else {
-      this.imp.setSlice(SkeletonBasedStep.cache.slice);
-      this.imp.setC(SkeletonBasedStep.cache.channel);
-      this.imp.setT(SkeletonBasedStep.cache.frame);
+      this.imp.setSlice(AbstractSkeletonBasedStep.cache.slice);
+      this.imp.setC(AbstractSkeletonBasedStep.cache.channel);
+      this.imp.setT(AbstractSkeletonBasedStep.cache.frame);
     }
 
     this.dialogContent = new JPanel();
@@ -109,10 +109,10 @@ public abstract class SkeletonBasedStep implements ICellsPluginStep {
 
   protected Skeleton getSkeleton() {
     String sId = this.getSkeletonId();
-    Skeleton skeleton = SkeletonBasedStep.cache.getSkeleton(sId);
+    Skeleton skeleton = AbstractSkeletonBasedStep.cache.getSkeleton(sId);
     if (skeleton == null) {
       skeleton = new Skeleton(this.getShapeIndexMap().duplicate());
-      SkeletonBasedStep.cache.setSkeleton(sId, skeleton);
+      AbstractSkeletonBasedStep.cache.setSkeleton(sId, skeleton);
     }
     return skeleton;
   }
@@ -120,10 +120,10 @@ public abstract class SkeletonBasedStep implements ICellsPluginStep {
   private ImagePlus getShapeIndexMap() {
     String simId = this.getIndexMapId();
     double blur = (double) blurRadiusSlider.getValue();
-    ImagePlus indexMap = SkeletonBasedStep.cache.getIndexMap(simId);
+    ImagePlus indexMap = AbstractSkeletonBasedStep.cache.getIndexMap(simId);
     if (indexMap == null) {
       indexMap = ShapeIndexMap.getShapeIndexMap(this.getOriginalFrame(), blur);
-      SkeletonBasedStep.cache.setIndexMap(simId, indexMap);
+      AbstractSkeletonBasedStep.cache.setIndexMap(simId, indexMap);
     }
     return thresholdShapeIndexMap(indexMap);
   }
@@ -216,7 +216,7 @@ public abstract class SkeletonBasedStep implements ICellsPluginStep {
     return spines;
   }
 
-  protected CellFrame spineToCellFrame(Spine spine) {
+  protected AbstractCellFrame spineToCellFrame(Spine spine) {
     List<Point2D> polyline = spine.toPolyline();
     if (polyline.size() >= 2) {
       Vertex sv1 = spine.getE1().getSkeletonVertex();
@@ -243,7 +243,7 @@ public abstract class SkeletonBasedStep implements ICellsPluginStep {
 
     Point2D searchEnd =
         new Point2D.Double(lineEnd.getX() + vx * searchRadius, lineEnd.getY() + vy * searchRadius);
-    List<Point> line = Utils.rasterizeLine(lineEnd, searchEnd);
+    List<Point> line = Geometry.rasterizeLine(lineEnd, searchEnd);
     double threshold = (double) thresholdSlider.getValue();
     for (int index = 0; index < line.size(); index++) {
       Point point = line.get(index);
@@ -257,7 +257,7 @@ public abstract class SkeletonBasedStep implements ICellsPluginStep {
   @Override
   public void imageUpdated() {
     if (this.initialized) {
-      SkeletonBasedStep.cache.updateCache(this.imp);
+      AbstractSkeletonBasedStep.cache.updateCache(this.imp);
       this.removeImageOverlay();
       if (this.skeletonCheckBox.isSelected()) {
         showImageOverlay(this.getSkeleton().toImagePlus());
