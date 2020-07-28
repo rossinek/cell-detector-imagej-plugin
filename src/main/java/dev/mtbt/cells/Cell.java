@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -253,8 +254,10 @@ public class Cell extends AbstractCellCollection {
     ownRois.forEach(roi -> {
       List<Point2D>[] polylines =
           Utils.cutPolyline(Utils.toPolyline(roi.getFloatPolygon()), l1, l2);
-      if (polylines.length > 1)
+      if (polylines.length > 1) {
+        Collections.reverse(polylines[1]);
         changes.add(new Pair<>(roi, polylines));
+      }
     });
     changes.forEach(pair -> {
       String cellFrameId = pair.getKey().getProperty(PROPERTY_CELL_FRAME_ID);
