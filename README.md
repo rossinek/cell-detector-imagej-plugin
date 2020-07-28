@@ -2,8 +2,8 @@
 
 ## Dependencies
 
-- Java
-- Maven
+- Java 8
+- Apache Maven (minimum 3.3.9)
 
 ## Build / run / install
 
