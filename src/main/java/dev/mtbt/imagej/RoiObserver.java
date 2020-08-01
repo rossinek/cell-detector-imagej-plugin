@@ -73,7 +73,8 @@ public class RoiObserver {
       // the only event for Line roi is of type RoiListener.MODIFIED
       // this code assumes that released mouse after RoiListener.MODIFIED event
       // for Line roi means that constructing Line has been completed
-      // and sends fake event of type RoiListener.CREATED
+      // and sends fake event of type RoiListener.CREATED;
+      // Similar situation repeats for ShapeRoi (COMPOSITE)
       if (this.lastLineRoi != null) {
         RoiObserver.notify(this.lastLineRoi, RoiListener.CREATED);
         this.lastLineRoi = null;

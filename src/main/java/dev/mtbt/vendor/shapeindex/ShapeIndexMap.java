@@ -17,7 +17,7 @@ import org.scijava.plugin.Plugin;
  *
  * @author Johannes Schindelin
  */
-@Plugin(type = Command.class, menuPath = "Development>Utils>Shape index map")
+@Plugin(type = Command.class, menuPath = "Mycobacterium>Utils>Shape index map")
 public class ShapeIndexMap implements Command {
 
   /**

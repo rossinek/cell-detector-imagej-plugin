@@ -7,7 +7,7 @@
 
 ## Build / run / install
 
-Plugins should be visible in `Menu > Development`
+Plugins should be visible in `Menu > Mycobacterium`
 
 ### Build and run
 

@@ -25,7 +25,7 @@ import dev.mtbt.gui.DialogStepperActions;
 import dev.mtbt.gui.RunnableCheckBox;
 import dev.mtbt.gui.StackWindowWithPanel;
 
-@Plugin(type = Command.class, menuPath = "Development>Cell detector")
+@Plugin(type = Command.class, menuPath = "Mycobacterium>Cell detector")
 public class CellsPlugin extends DynamicCommand implements ImageListener {
   public static CellsPlugin instance;
 
@@ -178,7 +178,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
       return true;
     }
     DialogPrompt.Result result = uiService.showDialog(
-        "Are you sure you want to close the plugin?\nMake sure you exported your cells (Development > Export Cells).\nYou won't be able to restore them after plugin is closed.",
+        "Are you sure you want to close the plugin?\nMake sure you exported your cells (Mycobacterium > Export Cells).\nYou won't be able to restore them after plugin is closed.",
         DialogPrompt.MessageType.QUESTION_MESSAGE, DialogPrompt.OptionType.YES_NO_OPTION);
     boolean response = result == DialogPrompt.Result.YES_OPTION;
     if (response) {

@@ -22,7 +22,7 @@ import ij.gui.ShapeRoi;
 import ij.plugin.frame.RoiManager;
 
 public class CellsManager implements IRoiObserverListener, ListDataListener {
-  // Those are actual IJ tool names
+  // Those are actual IJ tool names - it shouldn't be changed
   static public final String TOOL_CUT = "line", TOOL_ERASE = "brush";
 
   static private String activeTool = null;

@@ -15,7 +15,7 @@ import org.scijava.widget.FileWidget;
 import dev.mtbt.cells.CellCollection;
 import dev.mtbt.cells.CellsPlugin;
 
-@Plugin(type = Command.class, menuPath = "Development>Import cells")
+@Plugin(type = Command.class, menuPath = "Mycobacterium>Import cells")
 public class CellsImporterPlugin extends DynamicCommand {
   @Parameter
   private UIService uiService;

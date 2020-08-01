@@ -14,7 +14,7 @@ import org.scijava.ui.UIService;
 import org.scijava.widget.FileWidget;
 import dev.mtbt.cells.CellsPlugin;
 
-@Plugin(type = Command.class, menuPath = "Development>Export cells")
+@Plugin(type = Command.class, menuPath = "Mycobacterium>Export cells")
 public class CellsExporterPlugin extends DynamicCommand {
   @Parameter
   private UIService uiService;

@@ -9,7 +9,7 @@ import org.scijava.plugin.Plugin;
 import org.scijava.ui.UIService;
 import ij.ImagePlus;
 
-@Plugin(type = Command.class, menuPath = "Development>Utils>Open Bio Format")
+@Plugin(type = Command.class, menuPath = "Mycobacterium>Utils>Open Bio Format")
 public class BioFormatsRunner extends DynamicCommand {
   @Parameter
   private UIService uiService;

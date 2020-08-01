@@ -18,7 +18,7 @@ import org.scijava.command.Command;
 import org.scijava.command.DynamicCommand;
 import org.scijava.plugin.Plugin;
 
-@Plugin(type = Command.class, menuPath = "Development>Utils>Find local maxima")
+@Plugin(type = Command.class, menuPath = "Mycobacterium>Utils>Find local maxima")
 public class PicksFinder extends DynamicCommand {
   double tolerance = 0d;
   double minPeakDistance = 0d;

@@ -6,7 +6,7 @@ import org.scijava.command.DynamicCommand;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
-@Plugin(type = Command.class, menuPath = "Development>Utils>Image Stabilizer")
+@Plugin(type = Command.class, menuPath = "Mycobacterium>Utils>Image Stabilizer")
 public class ImageStabilizerRunner extends DynamicCommand {
   @Parameter
   private ImagePlus imp;
