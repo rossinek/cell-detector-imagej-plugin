@@ -8,7 +8,6 @@ import dev.mtbt.graph.Point;
 import dev.mtbt.graph.Vertex;
 import ij.ImagePlus;
 import ij.process.ByteProcessor;
-import ij.process.FloatProcessor;
 import sc.fiji.analyzeSkeleton.AnalyzeSkeleton_;
 import sc.fiji.analyzeSkeleton.SkeletonResult;
 import sc.fiji.skeletonize3D.Skeletonize3D_;
@@ -21,27 +20,15 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 public class Skeleton extends Graph {
-  protected FloatProcessor initialFp;
   protected AnalyzeSkeleton_ analyzeSkeleton;
   protected SkeletonResult skeletonResult;
 
-  private final double EDGE_EVALUATOR_RADIUS = 10;
-
-  private IEdgeEvaluator weakestSlabEvaluator = (edge, start) -> {
-    double lowestValue = Double.POSITIVE_INFINITY;
-    for (Point slab : edge.getSlabs()) {
-      double dist = Geometry.distance(slab, start.getPoints());
-      if (dist <= EDGE_EVALUATOR_RADIUS) {
-        lowestValue = Math.min(initialFp.getf(slab.x, slab.y), lowestValue);
-      }
-    }
-    double scale = 1 / (initialFp.getMax() - initialFp.getMin());
-    return (lowestValue - initialFp.getMin()) * scale;
-  };
+  private WeakestSlabEdgeEvaluator weakestSlabEvaluator;
 
   public Skeleton(ImagePlus imp) {
     super();
-    initialFp = imp.getProcessor().convertToFloatProcessor();
+    this.weakestSlabEvaluator =
+        new WeakestSlabEdgeEvaluator(imp.getProcessor().convertToFloatProcessor());
     ImagePlus impSkeleton = new ImagePlus("skeleton", imp.getProcessor().convertToByteProcessor());
 
     Skeletonize3D_ skeletonizer = new Skeletonize3D_();

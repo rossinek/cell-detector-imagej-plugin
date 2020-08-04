@@ -11,7 +11,6 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.swing.BoxLayout;
@@ -193,26 +192,11 @@ public abstract class AbstractSkeletonBasedStep implements ICellsPluginStep {
   }
 
   protected List<Pair<Point, Spine>> fixConflicts(List<Pair<Point, Spine>> spines) {
-    boolean change;
-    do {
-      change = false;
-      ListIterator<Pair<Point, Spine>> iterator = spines.listIterator();
-      while (iterator.hasNext()) {
-        Pair<Point, Spine> spine = iterator.next();
-        for (int i = iterator.nextIndex(); i < spines.size(); i++) {
-          if (spine.getValue().overlaps(spines.get(i).getValue())) {
-            dev.mtbt.graph.Point p1 = new dev.mtbt.graph.Point(spine.getKey());
-            dev.mtbt.graph.Point p2 = new dev.mtbt.graph.Point(spines.get(i).getKey());
-            Spine.splitOverlap(new Pair<>(p1, spine.getValue()),
-                new Pair<>(p2, spines.get(i).getValue()),
-                p -> this.getShapeIndexMap().getProcessor().getf(p.x, p.y));
-            change = true;
-            break;
-          }
-        }
-      }
-    } while (change);
-
+    SpineConflictsResolver.fixConflicts(
+        spines.stream().map(p -> new Pair<>(new dev.mtbt.graph.Point(p.getKey()), p.getValue()))
+            .collect(Collectors.toList()),
+        p -> this.getShapeIndexMap().getProcessor().getf(p.x, p.y), new WeakestSlabEdgeEvaluator(
+            this.getShapeIndexMap().getProcessor().convertToFloatProcessor()));
     return spines;
   }
 
