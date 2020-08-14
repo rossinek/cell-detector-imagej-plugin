@@ -18,6 +18,7 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.DialogPrompt;
 import org.scijava.ui.UIService;
+import org.scijava.ui.DialogPrompt.MessageType;
 import dev.mtbt.cells.measurements.StepMeasurements;
 import dev.mtbt.cells.skeleton.SkeletonCellDetector;
 import dev.mtbt.cells.skeleton.SkeletonCellLifeTracker;
@@ -28,6 +29,13 @@ import dev.mtbt.gui.StackWindowWithPanel;
 @Plugin(type = Command.class, menuPath = "Mycobacterium>Cell detector")
 public class CellsPlugin extends DynamicCommand implements ImageListener {
   public static CellsPlugin instance;
+
+  public static final Class<? extends ICellsPluginStep> StepDetectorClass =
+      SkeletonCellDetector.class;
+  public static final Class<? extends ICellsPluginStep> StepLifeTrackerClass =
+      SkeletonCellLifeTracker.class;
+  public static final Class<? extends ICellsPluginStep> StepMeasurementsClass =
+      StepMeasurements.class;
 
   @Parameter
   private UIService uiService;
@@ -124,16 +132,23 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
     if (this.currentStepInstance != null) {
       this.currentStepInstance.cleanup();
     }
-    switch (this.currentStep) {
-      case Detector:
-        this.currentStepInstance = new SkeletonCellDetector();
-        break;
-      case LifeTracker:
-        this.currentStepInstance = new SkeletonCellLifeTracker();
-        break;
-      case Measurements:
-        this.currentStepInstance = new StepMeasurements();
-        break;
+    try {
+      switch (this.currentStep) {
+        case Detector:
+          this.currentStepInstance = CellsPlugin.StepDetectorClass.newInstance();
+          break;
+        case LifeTracker:
+          this.currentStepInstance = CellsPlugin.StepLifeTrackerClass.newInstance();
+          break;
+        case Measurements:
+          this.currentStepInstance = CellsPlugin.StepMeasurementsClass.newInstance();
+          break;
+      }
+    } catch (InstantiationException | IllegalAccessException e) {
+      uiService.showDialog("Something went wrong with " + this.currentStep.toString()
+          + " step initialization.\n" + "Please close the plugin and try again.",
+          MessageType.ERROR_MESSAGE);
+      e.printStackTrace();
     }
     this.dialogContent.removeAll();
     JComponent content = this.currentStepInstance.init(this.impPreviewStack, this.cellCollection);

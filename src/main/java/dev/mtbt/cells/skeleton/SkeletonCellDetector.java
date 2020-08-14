@@ -43,7 +43,6 @@ public class SkeletonCellDetector extends AbstractSkeletonBasedStep {
     this.dialogContent.add(Box.createVerticalStrut(20));
     addCenteredComponent(this.dialogContent, buttonsPanel);
 
-    // this.dialog.pack();
     this.preview();
     return this.dialogContent;
   }

@@ -36,9 +36,6 @@ public class StepMeasurements implements ICellsPluginStep {
 
   private RunnableSpinner fluorescentChannelSpinner;
 
-  public StepMeasurements() {
-  }
-
   @Override
   public JPanel init(ImagePlus imp, CellCollection cellCollection) {
     this.imp = imp;

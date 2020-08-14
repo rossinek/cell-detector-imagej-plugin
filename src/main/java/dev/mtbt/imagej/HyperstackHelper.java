@@ -6,6 +6,10 @@ import ij.plugin.SubHyperstackMaker;
 import ij.process.ImageConverter;
 
 public class HyperstackHelper {
+  public static ImagePlus extractFrame(ImagePlus imp) {
+    return HyperstackHelper.extractFrame(imp, imp.getChannel(), imp.getSlice(), imp.getT());
+  }
+
   public static ImagePlus extractFrame(ImagePlus imp, int channel, int slice, int frame) {
     return SubHyperstackMaker.makeSubhyperstack(imp.duplicate(), Integer.toString(channel),
         Integer.toString(slice), Integer.toString(frame));

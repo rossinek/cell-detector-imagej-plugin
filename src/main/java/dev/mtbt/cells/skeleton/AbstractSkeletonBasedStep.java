@@ -79,10 +79,7 @@ public abstract class AbstractSkeletonBasedStep implements ICellsPluginStep {
     this.skeletonCheckBox = new RunnableCheckBox("show skeleton", this::preview);
     addCenteredComponent(advancedPanel, this.skeletonCheckBox);
 
-    ExpandablePanel expandablePanel =
-        new ExpandablePanel("advanced settings >>", advancedPanel, () -> {
-          // this.dialog.pack()
-        });
+    ExpandablePanel expandablePanel = new ExpandablePanel("advanced settings >>", advancedPanel);
     addCenteredComponent(this.dialogContent, expandablePanel);
     this.initialized = true;
     return this.dialogContent;
@@ -169,7 +166,7 @@ public abstract class AbstractSkeletonBasedStep implements ICellsPluginStep {
   @Override
   public void cleanup() {
     if (this.imp != null) {
-      imp.setOverlay(null);
+      this.removeImageOverlay();
     }
   }
 
@@ -244,9 +241,9 @@ public abstract class AbstractSkeletonBasedStep implements ICellsPluginStep {
       AbstractSkeletonBasedStep.cache.updateCache(this.imp);
       this.removeImageOverlay();
       if (this.skeletonCheckBox.isSelected()) {
-        showImageOverlay(this.getSkeleton().toImagePlus());
+        this.showImageOverlay(this.getSkeleton().toImagePlus());
       } else if (this.shapeIndexCheckBox.isSelected()) {
-        showImageOverlay(getShapeIndexMap());
+        this.showImageOverlay(this.getShapeIndexMap());
       }
     }
   }

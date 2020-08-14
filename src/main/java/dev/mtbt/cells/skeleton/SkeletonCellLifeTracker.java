@@ -18,7 +18,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import javax.swing.Box;
 import javax.swing.JPanel;
@@ -29,8 +28,6 @@ public class SkeletonCellLifeTracker extends AbstractSkeletonBasedStep {
   private RunnableButton duplicateNextFrameButton;
   private RunnableButton calculateNextFramesButton;
   private RunnableSpinner nFramesSpinner;
-
-  CompletableFuture<Void> result = new CompletableFuture<>();
 
   @Override
   public JPanel init(ImagePlus imp, CellCollection cellCollection) {
@@ -61,7 +58,6 @@ public class SkeletonCellLifeTracker extends AbstractSkeletonBasedStep {
     dialogContent.add(Box.createVerticalStrut(20));
     addCenteredComponent(dialogContent, buttonsPanel);
 
-    // this.dialog.pack();
     this.showFirstFrameWithCells();
 
     return this.dialogContent;

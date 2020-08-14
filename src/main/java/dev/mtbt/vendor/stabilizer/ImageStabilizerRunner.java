@@ -15,8 +15,6 @@ public class ImageStabilizerRunner extends DynamicCommand {
   public void run() {
     Image_Stabilizer iStabilizer = new Image_Stabilizer();
     iStabilizer.setup("", imp);
-    // iStabilizer.showDialog(imp.getProcessor());
     iStabilizer.run(imp.getProcessor());
-
   }
 }
