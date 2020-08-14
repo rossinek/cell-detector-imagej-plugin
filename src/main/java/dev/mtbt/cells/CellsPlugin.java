@@ -33,7 +33,7 @@ public class CellsPlugin extends DynamicCommand implements ImageListener {
   public static final Class<? extends ICellsPluginStep> StepDetectorClass =
       SkeletonCellDetector.class;
   public static final Class<? extends ICellsPluginStep> StepLifeTrackerClass =
-      SkeletonCellLifeTracker.class;
+      ExampleLifeTracker.class;
   public static final Class<? extends ICellsPluginStep> StepMeasurementsClass =
       StepMeasurements.class;
 
