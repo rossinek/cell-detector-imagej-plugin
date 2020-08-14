@@ -1,4 +1,4 @@
-# Cells detection and description
+# Mycobacterium cells detection and description in ImageJ
 
 ## Dependencies
 
