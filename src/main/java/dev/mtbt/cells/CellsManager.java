@@ -26,6 +26,7 @@ public class CellsManager implements IRoiObserverListener, ListDataListener {
   static public final String TOOL_CUT = "line", TOOL_ERASE = "brush";
 
   static private String activeTool = null;
+  static private String previousToolName = null;
 
   private ImagePlus observedImage;
   private CellCollection cellCollection;
@@ -140,6 +141,9 @@ public class CellsManager implements IRoiObserverListener, ListDataListener {
       WindowManager.getCurrentImage().deleteRoi();
     }
     if (tool != null) {
+      if (CellsManager.activeTool == null) {
+        CellsManager.previousToolName = IJ.getToolName();
+      }
       switch (tool) {
         case CellsManager.TOOL_CUT:
           IJ.setTool(CellsManager.TOOL_CUT);
@@ -150,6 +154,9 @@ public class CellsManager implements IRoiObserverListener, ListDataListener {
       }
     }
     CellsManager.activeTool = tool;
+    if (tool == null) {
+      IJ.setTool(CellsManager.previousToolName);
+    }
   }
 
   @Override
