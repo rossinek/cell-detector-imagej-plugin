@@ -33,6 +33,7 @@ public class StepMeasurements implements ICellsPluginStep {
   private ImagePlus imp;
   private CellCollection cellCollection;
   private JComboBox<String> measurementsCellNameSelect;
+  private int cellsCollectionHashCode = 0;
 
   private RunnableSpinner fluorescentChannelSpinner;
 
@@ -96,8 +97,13 @@ public class StepMeasurements implements ICellsPluginStep {
   private void updateCellsModel() {
     if (this.measurementsCellNameSelect != null) {
       List<String> cells = CellAnalyzer.getAllGenerationsNames(this.cellCollection);
-      this.measurementsCellNameSelect
-          .setModel(new DefaultComboBoxModel<>(cells.toArray(new String[cells.size()])));
+      cells.sort((a, b) -> a.compareTo(b));
+      int hashCode = cells.stream().mapToInt(s -> s.hashCode()).reduce(1, (acc, i) -> acc * i);
+      if (this.cellsCollectionHashCode == 0 || this.cellsCollectionHashCode != hashCode) {
+        this.cellsCollectionHashCode = hashCode;
+        this.measurementsCellNameSelect
+            .setModel(new DefaultComboBoxModel<>(cells.toArray(new String[cells.size()])));
+      }
     }
   }
 
