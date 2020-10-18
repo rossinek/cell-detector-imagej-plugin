@@ -4,7 +4,7 @@ Tuberculosis and other diseases caused by the genus Mycobacterium remains a seri
 Basic research aimed at understanding the biology of Mycobacteria is very important for further work related to novel drug development.
 The important part of this kind of research is the process of obtaining data from microscopic recordings of the cell cycle of model organisms.
 
-This project is part of my master-thesis and aims to simplify this process and create a code base that can be used for further development.
+[This project is part of my master-thesis and aims](https://github.com/rossinek/cell-detector-master-thesis) to simplify this process and create a code base that can be used for further development.
 The tool was created as a plugin for the ImageJ – program that is widely used by the scientific community.
 
 ## Dependencies
