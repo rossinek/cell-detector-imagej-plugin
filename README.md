@@ -12,11 +12,15 @@ The tool was created as a plugin for the ImageJ – program that is widely used 
 - Java 8
 - Apache Maven (minimum 3.3.9)
 
-## Build / run / install
+## Install
 
-Plugins should be visible in `Menu > Mycobacterium`
+In order to install the plugin copy `Mtbt_Plugin-<version>.jar` file to the ImageJ/Fiji `/jars` directory.
 
-### Build and run
+**Plugin should be visible in `Menu > Mycobacterium`**
+
+## Build and run from source
+
+### Run without ImageJ/Fiji installed
 
 In this case there is no need for ImageJ/Fiji to be installed in your system.
 
